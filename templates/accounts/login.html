@@ -1,0 +1,90 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign In | PULSE — Rajkot Municipal Corporation</title>
+    <!-- Bootstrap 5.3 CSS -->
+    <link href="{% static 'vendor/bootstrap/bootstrap.min.css' %}" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="{% static 'vendor/bootstrap-icons/bootstrap-icons.min.css' %}" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="{% static 'css/custom.css' %}">
+    
+    <style>
+        body {
+            background-color: #0b1f35;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .clean-login-box {
+            background: #ffffff;
+            border-radius: 12px;
+            max-width: 420px;
+            width: 100%;
+            padding: 2.25rem;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+        }
+    </style>
+</head>
+<body>
+
+<div class="clean-login-box" style="max-width: 460px;">
+    <div class="text-center mb-4">
+        <div class="d-inline-flex p-3 rounded-3 mb-2" style="background-color: #0f2b48; color: #ffffff;">
+            <i class="bi bi-activity fs-3"></i>
+        </div>
+        <h3 class="fw-bold text-dark mb-0">PULSE</h3>
+        <div class="text-muted small">Rajkot Municipal Corporation</div>
+    </div>
+
+    {% if error %}<div class="alert alert-danger py-2 small">{{ error }}</div>{% endif %}
+
+    <div class="eyebrow mb-2">Sign in as</div>
+    <div class="d-flex flex-column gap-2 mb-4">
+        {% for p in personas %}
+        <form method="POST" action="{% url 'login' %}">
+            {% csrf_token %}
+            <input type="hidden" name="username" value="{{ p.username }}">
+            <input type="hidden" name="password" value="{{ demo_password }}">
+            <button type="submit" class="persona-card">
+                <span class="p-ico"><i class="bi {{ p.icon }}"></i></span>
+                <span class="flex-grow-1">
+                    <span class="d-block p-title">{{ p.title }}</span>
+                    <span class="d-block p-sub">{{ p.subtitle }}</span>
+                    <span class="d-block p-who">{{ p.person }}</span>
+                </span>
+                <i class="bi bi-chevron-right text-muted"></i>
+            </button>
+        </form>
+        {% endfor %}
+    </div>
+
+    <details class="pt-3 border-top">
+        <summary class="small text-muted" style="cursor: pointer;">Use a different account</summary>
+        <form method="POST" action="{% url 'login' %}" class="mt-3">
+            {% csrf_token %}
+            <div class="mb-3">
+                <label class="form-label small fw-bold text-dark">Staff Username</label>
+                <input type="text" name="username" class="form-control" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label small fw-bold text-dark">Password</label>
+                <input type="password" name="password" class="form-control" required>
+            </div>
+            <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold" style="background-color: #0f2b48; border-color: #0f2b48;">Sign In &rarr;</button>
+        </form>
+    </details>
+    <div class="text-center small text-muted mt-3" style="font-size: .72rem;">Demo environment · synthetic data</div>
+</div>
+
+</body>
+</html>

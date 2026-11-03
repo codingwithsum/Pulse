@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% load pulse_extras %}
+
+{% block title %}My Department | PULSE — Rajkot Municipal Corporation{% endblock %}
+
+{% block content %}
+{% if not dept %}
+<div class="simple-card text-center py-5"><h4>No department assigned</h4><p class="text-muted mb-0">Ask an administrator to link your account to a department.</p></div>
+{% else %}
+<div class="page-head">
+    <div>
+        <span class="scope-banner"><i class="bi {{ dept_icon }}"></i> {{ dept.head_title|default:"Department Head" }}</span>
+        <h2>{{ dept.name }}</h2>
+        <div class="page-sub">Complaints routed to your branch · data up to {{ anchor|date:"d M Y, H:i" }}</div>
+    </div>
+    {% include "partials/_window.html" %}
+</div>
+
+<div class="summary-banner">
+    <i class="bi bi-chat-square-text"></i>
+    <div><div class="summary-kicker">In short</div><p>{{ headline }}</p></div>
+</div>
+<div class="sec-head"><span class="sec-num">1</span><div><h3>How many complaints are coming in?</h3><div class="sec-sub">Complaints routed to your department, compared with the period just before.</div></div></div>
+{% include "partials/_hero.html" %}
+
+<div class="sec-head"><span class="sec-num">2</span><div><h3>What needs action now?</h3><div class="sec-sub">Urgent complaints, items waiting for your check, and issues that are growing.</div></div></div>
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <a class="tile" href="{% url 'feedback_inbox' %}?window={{ window }}">
+            <span class="tile-icon blue"><i class="bi bi-inbox"></i></span>
+            <span><span class="tile-num d-block">{{ total }}</span><span class="tile-label">Complaints · {{ window_label }}</span></span>
+        </a>
+    </div>
+    <div class="col-md-4">
+        <a class="tile" href="{% url 'feedback_inbox' %}?urgency=EMERGENCY&window={{ window }}">
+            <span class="tile-icon bad"><i class="bi bi-exclamation-octagon"></i></span>
+            <span><span class="tile-num d-block">{{ urgent_count }}</span><span class="tile-label">Urgent or high priority</span></span>
+        </a>
+    </div>
+    <div class="col-md-4">
+        <a class="tile" href="{% url 'feedback_inbox' %}?status=pending">
+            <span class="tile-icon mid"><i class="bi bi-clipboard-check"></i></span>
+            <span><span class="tile-num d-block">{{ review_count }}</span><span class="tile-label">Waiting for you to verify</span></span>
+        </a>
+    </div>
+</div>
+
+{% include "partials/_rising.html" %}
+
+<div class="sec-head"><span class="sec-num">3</span><div><h3>What are people reporting, and where?</h3><div class="sec-sub">Issue types for the selected period, and the wards they come from.</div></div></div>
+<div class="row g-4 mb-4">
+    <div class="col-lg-6">
+        <div class="simple-card h-100 mb-0">
+            <div class="simple-card-header">
+                <h3 class="simple-card-title"><i class="bi bi-list-ol"></i> What people are reporting</h3>
+                <span class="pill {{ sentiment.1 }}">Mood: {{ sentiment.0 }}</span>
+            </div>
+            <div class="brk">
+                {% for c in categories %}
+                <a class="brk-row text-decoration-none" href="{% url 'feedback_inbox' %}?category={{ c.id }}&window={{ window }}">
+                    <div class="brk-top"><span class="brk-name">{{ c.name|title }}</span><strong class="text-dark">{{ c.count }}</strong></div>
+                    <div class="brk-track"><div class="brk-fill" style="width: {{ c.width }}%"></div></div>
+                </a>
+                {% empty %}<div class="text-muted small">No complaints in this period.</div>{% endfor %}
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="simple-card h-100 mb-0">
+            <div class="simple-card-header">
+                <h3 class="simple-card-title"><i class="bi bi-geo-alt"></i> Where it's happening</h3>
+                <a href="{% url 'location_analytics' %}?window={{ window }}" class="small text-muted text-decoration-none">All wards &rarr;</a>
+            </div>
+            {% include "partials/_map.html" with map_size="short" %}
+            <div class="d-flex flex-wrap gap-2 mt-3">
+                {% for w in top_wards %}
+                <a href="{% url 'ward_detail' w.number %}" class="pill blue text-decoration-none">Ward {{ w.number }} · {{ w.count }}</a>
+                {% endfor %}
+            </div>
+            {% if unlocated %}<div class="note-line mt-2"><i class="bi bi-info-circle"></i><span>{{ unlocated }} complaint{{ unlocated|pluralize }} with no ward on record.</span></div>{% endif %}
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

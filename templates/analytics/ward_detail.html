@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% load pulse_extras %}
+
+{% block title %}Ward {{ ward.ward_number }} | PULSE — Rajkot Municipal Corporation{% endblock %}
+
+{% block content %}
+{% if not as_home and persona != 'ward' %}
+<div class="mb-3">
+    <a href="{% url 'location_analytics' %}" class="text-decoration-none text-muted small fw-semibold"><i class="bi bi-arrow-left me-1"></i> All wards</a>
+</div>
+{% endif %}
+
+<div class="page-head">
+    <div>
+        <span class="scope-banner"><i class="bi bi-geo-alt-fill"></i> {{ zone }}{% if officer_name %} · Officer: {{ officer_name }}{% endif %}</span>
+        <h2>Ward {{ ward.ward_number }} · {{ ward_name }}</h2>
+        <div class="page-sub">{% if persona == 'dept' %}Showing only your department's complaints in this ward.{% else %}Every complaint recorded for this ward.{% endif %} Data up to {{ anchor|date:"d M Y, H:i" }}.</div>
+    </div>
+    {% include "partials/_window.html" %}
+</div>
+
+{% if hero %}{% include "partials/_hero.html" %}{% include "partials/_rising.html" %}{% endif %}
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3 col-6">
+        <div class="tile"><span class="tile-icon blue"><i class="bi bi-inbox"></i></span>
+            <span><span class="tile-num d-block">{{ total }}</span><span class="tile-label">Complaints</span></span></div>
+    </div>
+    <div class="col-md-3 col-6">
+        <div class="tile"><span class="tile-icon bad"><i class="bi bi-exclamation-octagon"></i></span>
+            <span><span class="tile-num d-block">{{ urgent_count }}</span><span class="tile-label">Urgent / high</span></span></div>
+    </div>
+    <div class="col-md-3 col-6">
+        <div class="tile"><span class="tile-icon mid"><i class="bi bi-clipboard-check"></i></span>
+            <span><span class="tile-num d-block">{{ review_count }}</span><span class="tile-label">To verify</span></span></div>
+    </div>
+    <div class="col-md-3 col-6">
+        <div class="tile"><span class="tile-icon {{ sentiment.1 }}"><i class="bi bi-emoji-neutral"></i></span>
+            <span><span class="tile-num d-block fs-5">{{ sentiment.0 }}</span><span class="tile-label">Citizen mood</span></span></div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-lg-5 d-flex flex-column gap-4">
+        <div class="simple-card mb-0">
+            <div class="simple-card-header"><h3 class="simple-card-title"><i class="bi bi-list-ol"></i> Issues in this ward</h3></div>
+            <div class="brk">
+                {% for c in categories %}
+                <a class="brk-row text-decoration-none" href="{% qs_with category=c.id %}#records">
+                    <div class="brk-top"><span class="brk-name">{{ c.name|title }}</span><strong class="text-dark">{{ c.count }}</strong></div>
+                    <div class="brk-track"><div class="brk-fill" style="width: {{ c.width }}%"></div></div>
+                </a>
+                {% empty %}<div class="text-muted small">No complaints in this period.</div>{% endfor %}
+            </div>
+        </div>
+        {% if persona != 'dept' %}
+        <div class="simple-card mb-0">
+            <div class="simple-card-header"><h3 class="simple-card-title"><i class="bi bi-building"></i> Departments involved</h3></div>
+            <div class="brk">
+                {% for d in departments %}
+                <div class="brk-row">
+                    <div class="brk-top"><span class="brk-name">{{ d.name }}</span><strong class="text-dark">{{ d.count }}</strong></div>
+                    <div class="brk-track"><div class="brk-fill" style="width: {{ d.width }}%; background: linear-gradient(90deg,#0ea5e9,#7dd3fc)"></div></div>
+                </div>
+                {% empty %}<div class="text-muted small">Nothing to show.</div>{% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    <div class="col-lg-7">
+        <div class="simple-card h-100 mb-0">
+            <div class="simple-card-header"><h3 class="simple-card-title"><i class="bi bi-map"></i> Location</h3>
+                <span class="small text-muted">{{ ward.get_zone_display }}</span></div>
+            {% if map %}{% include "partials/_map.html" with map_size="tall" %}
+            {% else %}<div class="text-muted small">No map position available for this ward.</div>{% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- All records for the ward -->
+<div id="records" class="d-flex justify-content-between align-items-end mb-2">
+    <h3 class="fw-bold fs-5 mb-0" style="color: var(--pulse-brand)">All records <span class="text-muted fw-normal fs-6">({{ result_count }})</span></h3>
+</div>
+<form method="GET" class="filter-bar">
+    <input type="hidden" name="window" value="{{ window }}">
+    <div class="row g-2 align-items-end">
+        <div class="col-md-4">
+            <label class="form-label">Search</label>
+            <input type="text" name="q" value="{{ filters.q }}" class="form-control" placeholder="Keyword or street name">
+        </div>
+        <div class="col-6 col-md-2">
+            <label class="form-label">Category</label>
+            <select name="category" class="form-select" onchange="this.form.submit()">
+                <option value="">All</option>
+                {% for c in options.categories %}<option value="{{ c.id }}" {% if filters.category == c.id %}selected{% endif %}>{{ c.name|title }}</option>{% endfor %}
+            </select>
+        </div>
+        <div class="col-6 col-md-2">
+            <label class="form-label">Priority</label>
+            <select name="urgency" class="form-select" onchange="this.form.submit()">
+                <option value="">All</option>
+                <option value="EMERGENCY" {% if filters.urgency == 'EMERGENCY' %}selected{% endif %}>Urgent</option>
+                <option value="HIGH" {% if filters.urgency == 'HIGH' %}selected{% endif %}>High</option>
+                <option value="MEDIUM" {% if filters.urgency == 'MEDIUM' %}selected{% endif %}>Medium</option>
+                <option value="LOW" {% if filters.urgency == 'LOW' %}selected{% endif %}>Low</option>
+            </select>
+        </div>
+        <div class="col-6 col-md-2">
+            <label class="form-label">Status</label>
+            <select name="status" class="form-select" onchange="this.form.submit()">
+                <option value="">All</option>
+                <option value="pending" {% if filters.status == 'pending' %}selected{% endif %}>To verify</option>
+                <option value="reviewed" {% if filters.status == 'reviewed' %}selected{% endif %}>Verified</option>
+            </select>
+        </div>
+        <div class="col-6 col-md-2 d-flex gap-2">
+            <button class="btn-simple-primary flex-grow-1 justify-content-center">Apply</button>
+            <a href="{% qs_with q='' category='' urgency='' status='' sort='' %}" class="btn-simple-secondary" title="Reset">Reset</a>
+        </div>
+    </div>
+</form>
+
+<div class="d-flex flex-column gap-3 mb-4">
+    {% for item in items %}{% include "partials/_complaint_card.html" %}
+    {% empty %}
+    <div class="simple-card text-center py-5 text-muted mb-0">
+        <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+        <h5 class="fw-bold text-dark">No records for this ward{% if window != 'all' %} in this period{% endif %}</h5>
+        <p class="small mb-0">Try a wider time window or clear the filters. A complaint appears here when its ward is known: from RMC's own record, or from a landmark or ward number in the message.</p>
+    </div>
+    {% endfor %}
+</div>
+{% include "partials/_pager.html" %}
+{% endblock %}

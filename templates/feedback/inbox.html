@@ -1,0 +1,356 @@
+{% extends "base.html" %}
+{% load pulse_extras %}
+
+{% block title %}Complaints | PULSE — Rajkot Municipal Corporation{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <div>
+        <h2>Citizen Complaints</h2>
+        <div class="page-sub">
+            {% if persona == 'dept' %}Complaints routed to your department.{% elif persona == 'ward' %}Complaints from your ward.{% else %}Resource-wise complaints tracked from Social Media, Email, and Official Website.{% endif %}
+        </div>
+    </div>
+    {% include "partials/_window.html" %}
+</div>
+
+<!-- Source Filter Pills (Quick-Access) -->
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+    <span class="small fw-bold text-muted me-1"><i class="bi bi-funnel me-1"></i>Source Filter:</span>
+    <a href="{% url 'feedback_inbox' %}{% qs_with source='' source_type='' source_platform='' %}"
+        class="btn-sm text-decoration-none {% if not filters.source and not filters.source_type and not filters.source_platform %}btn-simple-primary{% else %}btn-simple-secondary{% endif %} py-1 px-3">
+        All Sources
+    </a>
+    <a href="{% url 'feedback_inbox' %}{% qs_with source='social' source_type='' source_platform='' %}"
+        class="btn-sm text-decoration-none {% if filters.source == 'social' or filters.source_type == 'SOCIAL_MEDIA' %}btn-simple-primary{% else %}btn-simple-secondary{% endif %} py-1 px-3">
+        <i class="bi bi-share me-1"></i>Social Media
+    </a>
+    <a href="{% url 'feedback_inbox' %}{% qs_with source='email' source_type='' source_platform='' %}"
+        class="btn-sm text-decoration-none {% if filters.source == 'email' or filters.source_type == 'EMAIL' %}btn-simple-primary{% else %}btn-simple-secondary{% endif %} py-1 px-3">
+        <i class="bi bi-envelope me-1 text-danger"></i>Email (Gmail)
+    </a>
+    <a href="{% url 'feedback_inbox' %}{% qs_with source='website' source_type='' source_platform='' %}"
+        class="btn-sm text-decoration-none {% if filters.source == 'website' or filters.source_type == 'OFFICIAL_WEBSITE' %}btn-simple-primary{% else %}btn-simple-secondary{% endif %} py-1 px-3">
+        <i class="bi bi-globe me-1 text-success"></i>Official Website
+    </a>
+    <a href="{% url 'feedback_inbox' %}{% qs_with source='twitter' source_type='' source_platform='' %}"
+        class="btn-sm text-decoration-none {% if filters.source == 'twitter' or filters.source_platform == 'TWITTER' %}btn-simple-primary{% else %}btn-simple-secondary{% endif %} py-1 px-3">
+        <i class="bi bi-twitter-x me-1"></i>Twitter (X)
+    </a>
+    <a href="{% url 'feedback_inbox' %}{% qs_with source='facebook' source_type='' source_platform='' %}"
+        class="btn-sm text-decoration-none {% if filters.source == 'facebook' or filters.source_platform == 'FACEBOOK' %}btn-simple-primary{% else %}btn-simple-secondary{% endif %} py-1 px-3">
+        <i class="bi bi-facebook me-1 text-primary"></i>Facebook
+    </a>
+</div>
+
+<form method="GET" class="filter-bar" id="filters">
+    <input type="hidden" name="window" value="{{ window }}">
+    <input type="hidden" name="view" value="{{ filters.view }}">
+    {% if filters.source %}<input type="hidden" name="source" value="{{ filters.source }}">{% endif %}
+    <div class="row g-2 align-items-end">
+        <div class="col-12 col-xl-3">
+            <label class="form-label">Search</label>
+            <div class="search-wrap">
+                <i class="bi bi-search"></i>
+                <input type="text" name="q" value="{{ filters.q }}" class="simple-search"
+                    placeholder="Keyword, street, ખાડા, પાણી…">
+            </div>
+        </div>
+        {% include "partials/_filter_selects.html" %}
+
+        <!-- Source Type & Platform Dropdowns -->
+        <div class="col-6 col-md-3 col-xl-2">
+            <label class="form-label">Source Type</label>
+            <select name="source_type" class="form-select" onchange="this.form.submit()">
+                <option value="">All Source Types</option>
+                <option value="SOCIAL_MEDIA" {% if filters.source_type == 'SOCIAL_MEDIA' %}selected{% endif %}>Social Media</option>
+                <option value="EMAIL" {% if filters.source_type == 'EMAIL' %}selected{% endif %}>Via Email</option>
+                <option value="OFFICIAL_WEBSITE" {% if filters.source_type == 'OFFICIAL_WEBSITE' %}selected{% endif %}>Official Website</option>
+            </select>
+        </div>
+        <div class="col-6 col-md-3 col-xl-2">
+            <label class="form-label">Source Platform</label>
+            <select name="source_platform" class="form-select" onchange="this.form.submit()">
+                <option value="">All Platforms</option>
+                <option value="TWITTER" {% if filters.source_platform == 'TWITTER' %}selected{% endif %}>Twitter (X)</option>
+                <option value="FACEBOOK" {% if filters.source_platform == 'FACEBOOK' %}selected{% endif %}>Facebook</option>
+                <option value="GMAIL" {% if filters.source_platform == 'GMAIL' %}selected{% endif %}>Gmail</option>
+                <option value="RMC_PORTAL" {% if filters.source_platform == 'RMC_PORTAL' %}selected{% endif %}>RMC Portal</option>
+            </select>
+        </div>
+
+        {% if persona != 'ward' %}
+        <div class="col-6 col-md-3 col-xl-1">
+            <label class="form-label">Ward</label>
+            <select name="ward" class="form-select" onchange="this.form.submit()">
+                <option value="">All</option>
+                {% for w in options.wards %}<option value="{{ w.number }}" {% if filters.ward == w.number %}selected{% endif %}>W{{ w.number }}</option>{% endfor %}
+            </select>
+        </div>
+        {% endif %}
+        <div class="col-6 col-md-3 col-xl-1">
+            <label class="form-label">Priority</label>
+            <select name="urgency" class="form-select" onchange="this.form.submit()">
+                <option value="">Any</option>
+                <option value="EMERGENCY" {% if filters.urgency == 'EMERGENCY' %}selected{% endif %}>Urgent</option>
+                <option value="HIGH" {% if filters.urgency == 'HIGH' %}selected{% endif %}>High</option>
+                <option value="MEDIUM" {% if filters.urgency == 'MEDIUM' %}selected{% endif %}>Medium</option>
+                <option value="LOW" {% if filters.urgency == 'LOW' %}selected{% endif %}>Low</option>
+            </select>
+        </div>
+        <div class="col-6 col-md-3 col-xl-1">
+            <label class="form-label">Sort</label>
+            <select name="sort" class="form-select" onchange="this.form.submit()">
+                <option value="new" {% if filters.sort == 'new' %}selected{% endif %}>Newest</option>
+                <option value="old" {% if filters.sort == 'old' %}selected{% endif %}>Oldest</option>
+                <option value="urgent" {% if filters.sort == 'urgent' %}selected{% endif %}>Urgent</option>
+            </select>
+        </div>
+        <div class="col-12 col-md-auto d-flex gap-2 ms-xl-auto">
+            <button type="submit" class="btn-simple-primary">Search</button>
+            <a href="{% url 'feedback_inbox' %}" id="resetFiltersBtn" class="btn-simple-secondary">Reset{% if active_filters and active_filters > 0 %} ({{ active_filters }}){% endif %}</a>
+        </div>
+    </div>
+</form>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="small text-muted">
+        Showing <strong class="text-dark">{{ total_count }}</strong> complaint{{ total_count|pluralize }}
+        {% if filters.source %}for <strong>{{ filters.source|title }}</strong>{% endif %}
+    </div>
+    <!-- Table / Card View Toggle -->
+    <div class="btn-group btn-group-sm" role="group">
+        <a href="{% url 'feedback_inbox' %}{% qs_with view='table' %}"
+            class="btn {% if filters.view != 'cards' %}btn-dark{% else %}btn-outline-secondary{% endif %}">
+            <i class="bi bi-table me-1"></i> Table View
+        </a>
+        <a href="{% url 'feedback_inbox' %}{% qs_with view='cards' %}"
+            class="btn {% if filters.view == 'cards' %}btn-dark{% else %}btn-outline-secondary{% endif %}">
+            <i class="bi bi-grid me-1"></i> Card View
+        </a>
+    </div>
+</div>
+
+{% if filters.view == 'cards' %}
+<!-- Card View -->
+<div class="d-flex flex-column gap-3 mb-4">
+    {% for item in items %}{% include "partials/_complaint_card.html" %}
+    {% empty %}
+    <div class="simple-card text-center py-5 text-muted">
+        <i class="bi bi-inbox fs-1 d-block mb-2 text-secondary"></i>
+        <h5 class="fw-bold text-dark">No complaints match these filters</h5>
+        <p class="small mb-3">Try a wider time window or clear a filter.</p>
+        <a href="{% url 'feedback_inbox' %}" class="btn-simple-secondary">Clear filters</a>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<!-- =======================================================================
+         Complaint Management Table (9 required columns)
+         ======================================================================= -->
+<div class="simple-card mb-4 p-0 overflow-hidden">
+    <div class="table-responsive">
+        <table class="simple-table mb-0">
+            <thead>
+                <tr>
+                    <th style="min-width: 110px;">Complaint ID</th>
+                    <th style="min-width: 250px;">Complaint Description</th>
+                    <th style="min-width: 130px;">Source Type</th>
+                    <th style="min-width: 140px;">Source Platform</th>
+                    <th style="min-width: 150px;">Category</th>
+                    <th style="min-width: 110px;">Sentiment</th>
+                    <th style="min-width: 160px;">Location</th>
+                    <th style="min-width: 140px;">Complaint Date</th>
+                    <th style="min-width: 110px;">Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items %}
+                <tr>
+                    <!-- 1. Complaint ID -->
+                    <td>
+                        <a href="{% url 'feedback_detail' item.id %}"
+                            class="fw-bold font-monospace text-decoration-none">
+                            #{{ item.id_short }}
+                        </a>
+                        {% if item.external_id and item.external_id != item.id_short %}
+                        <div class="small text-muted font-monospace" style="font-size: 0.72rem;">{{ item.external_id }}
+                        </div>
+                        {% endif %}
+                    </td>
+
+                    <!-- 2. Complaint Description -->
+                    <td>
+                        <div class="fw-semibold text-dark gujarati-text text-truncate" style="max-width: 320px;"
+                            title="{{ item.raw_text }}">
+                            "{{ item.raw_text }}"
+                        </div>
+                        {% if item.translation_en and item.translation_en != item.raw_text %}
+                        <div class="small text-muted text-truncate" style="max-width: 320px;"
+                            title="{{ item.translation_en }}">
+                            <em>{{ item.translation_en }}</em>
+                        </div>
+                        {% endif %}
+                    </td>
+
+                    <!-- 3. Source Type -->
+                    <td>
+                        {% if item.source_type == 'SOCIAL_MEDIA' %}
+                        <span class="pill blue"><i class="bi bi-share me-1"></i>Social Media</span>
+                        {% elif item.source_type == 'EMAIL' %}
+                        <span class="pill mid"><i class="bi bi-envelope me-1 text-danger"></i>Via Email</span>
+                        {% elif item.source_type == 'OFFICIAL_WEBSITE' %}
+                        <span class="pill good"><i class="bi bi-globe me-1 text-success"></i>Official Website</span>
+                        {% else %}
+                        <span class="pill muted">{{ item.source_type_display }}</span>
+                        {% endif %}
+                    </td>
+
+                    <!-- 4. Source Platform -->
+                    <td>
+                        {% if item.source_platform == 'TWITTER' %}
+                        <span class="badge bg-light text-dark border"><i class="bi bi-twitter-x me-1"></i>Twitter
+                            (X)</span>
+                        {% elif item.source_platform == 'FACEBOOK' %}
+                        <span class="badge bg-light text-primary border"><i
+                                class="bi bi-facebook me-1"></i>Facebook</span>
+                        {% elif item.source_platform == 'GMAIL' %}
+                        <span class="badge bg-light text-danger border"><i class="bi bi-google me-1"></i>Gmail</span>
+                        {% elif item.source_platform == 'RMC_PORTAL' %}
+                        <span class="badge bg-light text-success border"><i class="bi bi-building me-1"></i>RMC
+                            Portal</span>
+                        {% elif item.source_platform == 'WHATSAPP' %}
+                        <span class="badge bg-light text-success border"><i
+                                class="bi bi-whatsapp me-1"></i>WhatsApp</span>
+                        {% else %}
+                        <span class="badge bg-light text-dark border">{{ item.source_platform_display }}</span>
+                        {% endif %}
+                    </td>
+
+                    <!-- 5. Category -->
+                    <td>
+                        <strong class="text-dark d-block">{{ item.category }}</strong>
+                        <span class="small text-muted">{{ item.department }}</span>
+                    </td>
+
+                    <!-- 6. Sentiment -->
+                    <td>
+                        <span class="pill {{ item.sentiment_badge }}">
+                            {% if item.sentiment == 'Positive' %}<i class="bi bi-emoji-smile me-1"></i>
+                            {% elif item.sentiment == 'Negative' %}<i class="bi bi-emoji-frown me-1"></i>
+                            {% else %}<i class="bi bi-emoji-neutral me-1"></i>{% endif %}
+                            {{ item.sentiment }}
+                        </span>
+                    </td>
+
+                    <!-- 7. Location -->
+                    <td>
+                        <div class="small fw-semibold text-dark"><i class="bi bi-geo-alt text-danger me-1"></i>{% if item.ward and item.ward != 'Ward not identified' %}{{ item.ward }}{% else %}Ward Not Available{% endif %}</div>
+                        <div class="small text-muted text-truncate" style="max-width: 160px;" title="{{ item.place }}">
+                            {{ item.place }}</div>
+                    </td>
+
+                    <!-- 8. Complaint Date -->
+                    <td>
+                        <span class="small font-monospace text-muted">{{ item.complaint_date }}</span>
+                    </td>
+
+                    <!-- 9. Status -->
+                    <td>
+                        <span
+                            class="pill {% if item.is_reviewed %}good{% elif item.requires_review %}blue{% else %}muted{% endif %}">
+                            {% if item.is_reviewed %}<i class="bi bi-check2-circle me-1"></i>{% endif %}
+                            {{ item.status }}
+                        </span>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="9" class="text-center py-5 text-muted">
+                        <i class="bi bi-inbox fs-2 d-block mb-2 text-secondary"></i>
+                        <div class="fw-bold text-dark">No complaints match these source filters</div>
+                        <div class="small mb-3">Try clearing filters or selecting another source.</div>
+                        <a href="{% url 'feedback_inbox' %}" class="btn-simple-secondary btn-sm">Clear all filters</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+{% include "partials/_pager.html" %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const filterForm = document.getElementById('filters');
+    const resetBtn = document.getElementById('resetFiltersBtn');
+    if (!filterForm || !resetBtn) return;
+
+    function countActiveFilters() {
+        let count = 0;
+
+        // 1. Keyword search
+        const qInput = filterForm.querySelector('input[name="q"]');
+        if (qInput && qInput.value.trim() !== '') {
+            count++;
+        }
+
+        // 2. Dropdown filters: dept, category, source_type, source_platform, ward, urgency
+        const filterNames = ['dept', 'category', 'source_type', 'source_platform', 'ward', 'urgency'];
+        filterNames.forEach(function (name) {
+            const selectEl = filterForm.querySelector('select[name="' + name + '"]');
+            if (selectEl && selectEl.value && selectEl.value.trim() !== '') {
+                count++;
+            }
+        });
+
+        // 3. Hidden source / pill filter
+        const sourceHidden = filterForm.querySelector('input[name="source"]');
+        if (sourceHidden && sourceHidden.value && sourceHidden.value.trim() !== '') {
+            count++;
+        }
+
+        // 4. Time window if not 'all'
+        const windowHidden = filterForm.querySelector('input[name="window"]');
+        if (windowHidden && windowHidden.value && windowHidden.value.trim() !== '' && windowHidden.value !== 'all') {
+            count++;
+        }
+
+        return count;
+    }
+
+    function updateResetButton() {
+        const count = countActiveFilters();
+        if (count > 0) {
+            resetBtn.textContent = 'Reset (' + count + ')';
+        } else {
+            resetBtn.textContent = 'Reset';
+        }
+    }
+
+    // Dynamic real-time update on input / change without page reload
+    filterForm.addEventListener('input', updateResetButton);
+    filterForm.addEventListener('change', updateResetButton);
+
+    // On Reset click: clear all filters, reset count to zero, and navigate to clean inbox
+    resetBtn.addEventListener('click', function (e) {
+        const qInput = filterForm.querySelector('input[name="q"]');
+        if (qInput) qInput.value = '';
+
+        filterForm.querySelectorAll('select').forEach(function (sel) {
+            if (sel.name === 'sort') sel.value = 'new';
+            else sel.value = '';
+        });
+
+        const sourceHidden = filterForm.querySelector('input[name="source"]');
+        if (sourceHidden) sourceHidden.value = '';
+
+        resetBtn.textContent = 'Reset';
+    });
+});
+</script>
+{% endblock %}

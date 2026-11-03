@@ -1,0 +1,6 @@
+{% load pulse_extras %}
+<div class="seg" role="group" aria-label="Time window">
+    {% for key, label, _d in windows %}
+    <a href="{% qs_with window=key %}" class="{% if window == key %}on{% endif %}">{{ label }}</a>
+    {% endfor %}
+</div>

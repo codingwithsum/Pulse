@@ -1,0 +1,15 @@
+{% comment %}Shared filter fields. Expects `filters`, `options`; optional `hide_ward_filter`, `persona`.{% endcomment %}
+<div class="col-6 col-md-3 col-xl-2">
+    <label class="form-label">Department</label>
+    <select name="dept" class="form-select" onchange="this.form.category.value=''; this.form.submit()" {% if persona == 'dept' %}disabled{% endif %}>
+        {% if persona != 'dept' %}<option value="">All departments</option>{% endif %}
+        {% for d in options.departments %}<option value="{{ d.id }}" {% if filters.dept == d.id %}selected{% endif %}>{{ d.name }}</option>{% endfor %}
+    </select>
+</div>
+<div class="col-6 col-md-3 col-xl-2">
+    <label class="form-label">Category</label>
+    <select name="category" class="form-select" onchange="this.form.submit()">
+        <option value="">All categories</option>
+        {% for c in options.categories %}<option value="{{ c.id }}" {% if filters.category == c.id %}selected{% endif %}>{{ c.name|title }}</option>{% endfor %}
+    </select>
+</div>

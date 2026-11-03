@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+
+{% block title %}Upload Data & Channels | PULSE — Rajkot Municipal Corporation{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold mb-1" style="color: var(--pulse-brand);">Data Import & Channels</h2>
+        <div class="text-muted small">Upload complaint spreadsheets or manage intake channels.</div>
+    </div>
+</div>
+
+{% if upload_msg %}
+<div class="alert alert-success alert-dismissible fade show mb-4" role="alert">
+    <i class="bi bi-check-circle-fill me-2"></i> {{ upload_msg }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+<!-- Live WhatsApp Webhook Simulator Box -->
+<div class="simple-card mb-4" style="border-top: 3px solid #25D366;">
+    <div class="simple-card-header">
+        <h3 class="simple-card-title text-success">
+            <i class="bi bi-whatsapp"></i> Live WhatsApp Ingestion Simulator
+        </h3>
+        <span class="status-tag status-tag-success">Webhook Verified & Active</span>
+    </div>
+    <form method="POST" action="{% url 'integrations_hub' %}">
+        {% csrf_token %}
+        <input type="hidden" name="simulate_whatsapp" value="1">
+        <p class="small text-muted mb-3">
+            Test the live pipeline directly: enter any citizen message (English, Gujarati, or Hindi). The webhook will hash the sender phone number via SHA-256, run the AI categorization engine, and update the Dashboard instantly.
+        </p>
+
+        <div class="row g-2 mb-3">
+            <div class="col-md-4">
+                <label class="form-label small fw-semibold text-muted">Citizen Phone (Simulated)</label>
+                <input type="text" name="whatsapp_sender" class="form-control" value="919825123456" placeholder="e.g. 919825123456">
+                <div class="form-text small" style="font-size: 0.75rem;">Will be anonymized as SHA-256 hash</div>
+            </div>
+            <div class="col-md-8">
+                <label class="form-label small fw-semibold text-muted">Citizen Message Text</label>
+                <div class="input-group">
+                    <input type="text" name="whatsapp_text" id="waMessageInput" class="form-control" 
+                           placeholder="Type a complaint e.g. Drainage overflow near Indira Circle Ward 2" 
+                           value="Drainage overflow and foul smell near Indira Circle Ward 2 since yesterday morning" required>
+                    <button type="submit" class="btn btn-success fw-semibold px-4">
+                        <i class="bi bi-send-fill me-1"></i> Send Message
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2 align-items-center">
+            <span class="small text-muted">Quick presets:</span>
+            <button type="button" class="btn btn-sm btn-outline-secondary py-0" onclick="document.getElementById('waMessageInput').value='Drinking water contaminated and low pressure in Ward 7 Raiya Road';">
+                💧 Water Contamination (Ward 7)
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary py-0" onclick="document.getElementById('waMessageInput').value='Streetlights not working on Kalawad Road underpass, very dark at night';">
+                💡 Dark Streetlights (Kalawad Rd)
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary py-0" onclick="document.getElementById('waMessageInput').value='વોર્ડ ૧૦ માં કચરા પેટી ભરાઈ ગઈ છે અને રોડ પર ગંદકી છે';">
+                🧹 કચરા પેટી (Gujarati)
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Direct File Upload Box -->
+<div class="simple-card mb-4" style="border-top: 3px solid var(--pulse-brand);">
+    <div class="simple-card-header">
+        <h3 class="simple-card-title">
+            <i class="bi bi-file-earmark-arrow-up"></i> Upload Complaints Spreadsheet (Excel / CSV)
+        </h3>
+        <span class="small text-muted">Zero Citizen PII Stored</span>
+    </div>
+
+    <form method="POST" action="{% url 'integrations_hub' %}" enctype="multipart/form-data">
+        {% csrf_token %}
+        <p class="small text-muted mb-3">
+            Upload municipal complaint exports (.xlsx or .csv). Citizen names and phone numbers are automatically discarded, and duplicates are blocked via SHA-256.
+        </p>
+
+        <div class="d-flex flex-wrap gap-2 align-items-center">
+            <input type="file" name="dataset_file" class="form-control" style="max-width: 400px;" accept=".csv,.xlsx" required>
+            <button type="submit" class="btn-simple-primary">
+                <i class="bi bi-cloud-arrow-up"></i> Ingest & Classify File
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Channels Grid -->
+<div class="row g-3 mb-4">
+    {% for conn in integrations %}
+    <div class="col-md-6">
+        <div class="simple-card h-100 p-3.5 mb-0">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi {{ conn.icon }} fs-4" style="color: {{ conn.color }};"></i>
+                    <strong class="text-dark">{{ conn.name }}</strong>
+                </div>
+                <span class="status-tag {% if conn.status == 'HEALTHY' %}status-tag-success{% else %}status-tag-normal{% endif %}">
+                    {{ conn.status }}
+                </span>
+            </div>
+            <p class="small text-muted mb-2">{{ conn.description }}</p>
+            <div class="small text-muted d-flex justify-content-between pt-2 border-top">
+                <span>Total Items: <strong>{{ conn.total_ingested }}</strong></span>
+                <span>Last Sync: {{ conn.last_sync }}</span>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Ingestion Runs Table -->
+<div class="simple-card p-0 overflow-hidden">
+    <div class="p-3 border-bottom bg-light">
+        <h3 class="simple-card-title mb-0 fs-6">
+            <i class="bi bi-clock-history"></i> Recent Import Runs
+        </h3>
+    </div>
+
+    <div class="table-responsive">
+        <table class="simple-table">
+            <thead>
+                <tr>
+                    <th>Run ID</th>
+                    <th>Source</th>
+                    <th>Status</th>
+                    <th>Items Imported</th>
+                    <th>Duplicates Blocked</th>
+                    <th>Time</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for run in recent_sync_runs %}
+                <tr>
+                    <td class="font-monospace small text-primary">{{ run.id }}</td>
+                    <td class="fw-semibold text-dark">{{ run.source }}</td>
+                    <td><span class="status-tag status-tag-success">{{ run.status }}</span></td>
+                    <td><strong>{{ run.items }}</strong></td>
+                    <td class="text-muted">{{ run.dupes }}</td>
+                    <td class="small text-muted font-monospace">{{ run.time }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center py-4 text-muted small">No recent import runs.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,25 @@
+{% comment %}Two headline cards: last 24 hours (dark) and last 7 days (light). Expects `hero`.{% endcomment %}
+<div class="row g-3 mb-3">
+    {% for h in hero %}
+    <div class="col-md-6">
+        <div class="hero-card {% if forloop.first %}dark{% endif %}">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="hero-label">{{ h.label }}</div>
+                    <div class="hero-num">{{ h.count }}</div>
+                    <div class="hero-sub d-flex align-items-center gap-2 flex-wrap">
+                        {% include "partials/_delta.html" with change=h.change %}
+                        <span>vs {{ h.prev }} in the period before</span>
+                    </div>
+                </div>
+                <div class="text-end" style="min-width: 150px; max-width: 55%; flex: 0 0 45%;">
+                    <div class="bars" aria-hidden="true">
+                        {% for b in h.bars %}<span style="height: {{ b.height }}%;" title="{{ b.count }} complaints"></span>{% endfor %}
+                    </div>
+                    <div class="bars-caption">{{ h.bar_label }}, oldest to newest</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>

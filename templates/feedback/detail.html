@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+
+{% block title %}Review Complaint | PULSE — Rajkot Municipal Corporation{% endblock %}
+
+{% block content %}
+<!-- Back Link -->
+<div class="mb-3">
+    <a href="{% url 'feedback_inbox' %}" class="text-decoration-none text-muted small fw-semibold">
+        <i class="bi bi-arrow-left me-1"></i> Back to Complaints Inbox
+    </a>
+</div>
+
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold mb-1" style="color: var(--pulse-brand);">Complaint Review</h2>
+        <div class="text-muted small">Verify AI classification and dispatch to the responsible municipal branch.</div>
+    </div>
+    <div>
+        {% if item.is_reviewed %}
+        <span class="status-tag status-tag-success fs-6 py-1.5 px-3">
+            <i class="bi bi-check2-circle"></i> Verified by Staff
+        </span>
+        {% else %}
+        <span class="status-tag status-tag-urgent fs-6 py-1.5 px-3">
+            <i class="bi bi-hourglass-split"></i> Verification Pending
+        </span>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <!-- Citizen Message -->
+    <div class="col-lg-6">
+        <div class="simple-card h-100">
+            <div class="simple-card-header">
+                <h3 class="simple-card-title">
+                    <i class="bi bi-chat-quote"></i> Citizen Message
+                </h3>
+                <span class="badge bg-light text-dark border">
+                    {{ item.channel }}
+                </span>
+            </div>
+
+            <!-- Verbatim text -->
+            <div class="p-3 bg-light rounded-3 mb-3">
+                <div class="small text-muted fw-bold mb-1">Original Text:</div>
+                <div class="gujarati-text fs-5 fw-semibold text-dark lh-base">
+                    "{{ item.raw_text }}"
+                </div>
+            </div>
+
+            {% if item.language != 'en' %}
+            <div class="p-3 bg-light rounded-3 mb-3 border-start border-3 border-primary">
+                <div class="small text-muted fw-bold mb-1">Summary (first 120 characters of the original):</div>
+                <div class="text-dark">
+                    <em>{{ item.translation_en }}</em>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="row g-2 pt-3 border-top small text-muted">
+                <div class="col-6">
+                    <div>Logged At:</div>
+                    <strong class="text-dark">{{ item.published_at }}</strong>
+                </div>
+                <div class="col-6">
+                    <div>Citizen Privacy:</div>
+                    <span class="text-success"><i class="bi bi-shield-check me-1"></i> Protected (No PII)</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Officer Verification Form -->
+    <div class="col-lg-6">
+        <div class="simple-card h-100" style="border-top: 3px solid var(--pulse-brand);">
+            <div class="simple-card-header">
+                <h3 class="simple-card-title">
+                    <i class="bi bi-check2-circle"></i> Department & Ward Assignment
+                </h3>
+            </div>
+
+            <form method="POST" action="{% url 'feedback_detail' item.id %}">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-dark">Responsible Department</label>
+                    <select class="form-select" name="department">
+                        {% for dept in departments %}
+                        <option value="{{ dept.name }}" {% if dept.name == item.department %}selected{% endif %}>{{ dept.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold text-dark">Ward Location</label>
+                        <select class="form-select" name="ward">
+                            {% for w in all_wards %}
+                            <option value="{{ w }}" {% if w == item.ward %}selected{% endif %}>{{ w }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold text-dark">Priority Level</label>
+                        <select class="form-select" name="urgency">
+                            <option value="EMERGENCY" {% if item.urgency == 'EMERGENCY' %}selected{% endif %}>🚨 Urgent Safety Hazard</option>
+                            <option value="HIGH" {% if item.urgency == 'HIGH' %}selected{% endif %}>⚠️ High Priority</option>
+                            <option value="MEDIUM" {% if item.urgency == 'MEDIUM' %}selected{% endif %}>Medium</option>
+                            <option value="LOW" {% if item.urgency == 'LOW' %}selected{% endif %}>Low / Routine</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-dark">Specific Area / Landmark</label>
+                    <input type="text" class="form-control" name="category" value="{{ item.location }} ({{ item.category }})">
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label small fw-bold text-dark">Officer Inspection Notes (Optional)</label>
+                    <textarea class="form-control" name="review_notes" rows="2" placeholder="e.g. Jetting machine dispatched to Railnagar underpass...">{{ item.reviewer_notes }}</textarea>
+                </div>
+
+                <button type="submit" class="btn-simple-primary w-100 py-2.5 justify-content-center">
+                    <i class="bi bi-check2"></i> Confirm Assignment & Mark Verified
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Collapsible Technical Details (Kept hidden unless clicked) -->
+<details class="text-muted small">
+    <summary class="cursor-pointer mb-2">Show Technical Details & Audit Hashes</summary>
+    <div class="p-3 bg-light rounded-3 border font-monospace" style="font-size: 0.75rem;">
+        <div>External ID: {{ item.external_id }}</div>
+        <div>SHA-256 Sender Hash: {{ item.sender_hash }}</div>
+        <div>AI Engine Version: {{ item.model_version }}</div>
+        <div>Confidence: {{ item.confidence }}%</div>
+    </div>
+</details>
+{% endblock %}

@@ -1,0 +1,17 @@
+{% comment %}Plain-language alert for issues reported more this week than last. Expects `rising`.{% endcomment %}
+<div class="simple-card mb-4" style="border-left: 4px solid {% if rising %}#f59e0b{% else %}#16a34a{% endif %};">
+    <div class="d-flex align-items-center gap-2 {% if rising %}mb-2{% endif %}">
+        {% if rising %}<i class="bi bi-graph-up-arrow text-warning fs-5"></i><strong>Rising issues this week</strong>
+        {% else %}<i class="bi bi-check-circle text-success fs-5"></i><strong>No issue is rising faster than normal this week</strong>{% endif %}
+        <span class="small text-muted ms-auto">vs the previous 7 days</span>
+    </div>
+    {% for r in rising %}
+    <a href="{% url 'feedback_inbox' %}?category={{ r.id }}&window=7d" class="d-flex flex-wrap justify-content-between align-items-center gap-2 text-decoration-none py-2 {% if not forloop.first %}border-top{% endif %}">
+        <span class="text-dark"><strong>{{ r.name|title }}</strong> <span class="text-muted small">· {{ r.dept }}</span></span>
+        <span class="small text-dark">
+            {{ r.now }} complaints, up from {{ r.before }}
+            {% if r.change is not None %}<span class="delta up ms-1"><i class="bi bi-arrow-up-right"></i> {{ r.change }}%</span>{% else %}<span class="delta up ms-1">New</span>{% endif %}
+        </span>
+    </a>
+    {% endfor %}
+</div>

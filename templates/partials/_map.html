@@ -1,0 +1,38 @@
+{% comment %}Ward map. Expects `map` ({points, center, focus}) and optional `map_size` (short|tall).{% endcomment %}
+<div id="ward-map" class="map-box {{ map_size }}"></div>
+{{ map|json_script:"ward-map-data" }}
+<script>
+(function () {
+    var data = JSON.parse(document.getElementById('ward-map-data').textContent);
+    var map = L.map('ward-map', {scrollWheelZoom: false}).setView(data.center, 12);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 18, referrerPolicy: 'strict-origin-when-cross-origin', attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    var peak = Math.max.apply(null, data.points.map(function (p) { return p.count; }).concat([1]));
+    var bounds = [], focusMarker = null;
+    data.points.forEach(function (p) {
+        var ratio = p.count / peak;
+        var color = !p.count ? '#9ca3af' : (ratio >= 0.66 ? '#ef4444' : (ratio >= 0.33 ? '#f59e0b' : '#3b82f6'));
+        var isFocus = data.focus === p.number;
+        var m = L.circleMarker([p.lat, p.lng], {
+            radius: p.count ? 11 + Math.sqrt(p.count) * 4 : 8,
+            color: isFocus ? '#0f2b48' : '#ffffff', weight: isFocus ? 3 : 2,
+            fillColor: color, fillOpacity: p.count ? 0.8 : 0.45
+        }).addTo(map);
+        var label = '<strong>Ward ' + p.number + '</strong><br>' + p.name + '<br>' +
+                    '<span style="color:#6b7280">' + p.zone + '</span><br>' +
+                    '<strong>' + p.count + '</strong> complaint' + (p.count === 1 ? '' : 's') +
+                    (p.urgent ? ' · <span style="color:#dc2626">' + p.urgent + ' urgent</span>' : '') +
+                    '<br><a href="/wards/' + p.number + '/">Open ward records &rarr;</a>';
+        m.bindPopup(label);
+        m.bindTooltip('Ward ' + p.number + (p.count ? ' · ' + p.count : ''), {direction: 'top'});
+        bounds.push([p.lat, p.lng]);
+        if (isFocus) focusMarker = m;
+    });
+    if (focusMarker) { map.setView(focusMarker.getLatLng(), 14); }
+    else if (bounds.length > 1) { map.fitBounds(bounds, {padding: [30, 30]}); }
+    map.on('click', function () { map.scrollWheelZoom.enable(); });
+})();
+</script>
+<div class="note-line mt-2"><i class="bi bi-info-circle"></i><span>Marker positions are approximate ward centres, not official boundaries. Marker size and colour show complaint volume.</span></div>

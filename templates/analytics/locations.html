@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% load pulse_extras %}
+
+{% block title %}Wards | PULSE — Rajkot Municipal Corporation{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <div>
+        <h2>Wards</h2>
+        <div class="page-sub">
+            {% if persona == 'dept' %}Where your department's complaints are coming from.{% else %}Complaints across Rajkot's 18 wards and 3 zones.{% endif %}
+            Click a ward to see all of its records.
+        </div>
+    </div>
+    {% include "partials/_window.html" %}
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-sm-4"><div class="tile"><span class="tile-icon blue"><i class="bi bi-pin-map"></i></span>
+        <span><span class="tile-num d-block">{{ mapped_total }}</span><span class="tile-label">Complaints placed in a ward</span></span></div></div>
+    <div class="col-sm-4"><div class="tile"><span class="tile-icon mid"><i class="bi bi-fire"></i></span>
+        <span><span class="tile-num d-block fs-5">{% if busiest %}Ward {{ busiest.number }}{% else %}—{% endif %}</span><span class="tile-label">{% if busiest %}Busiest · {{ busiest.count }} complaints{% else %}No ward data in this period{% endif %}</span></span></div></div>
+    <div class="col-sm-4"><div class="tile"><span class="tile-icon good"><i class="bi bi-grid-3x3-gap"></i></span>
+        <span><span class="tile-num d-block">{{ wards_with_data }}<span class="text-muted fs-6 fw-semibold"> / 18</span></span><span class="tile-label">Wards with complaints</span></span></div></div>
+</div>
+
+<div class="row g-4">
+    <div class="col-xl-6 order-xl-2">
+        <div class="simple-card mb-0" style="position: sticky; top: 84px;">
+            <div class="simple-card-header"><h3 class="simple-card-title"><i class="bi bi-map"></i> Map</h3>
+                <span class="small text-muted">{{ window_label }}</span></div>
+            {% include "partials/_map.html" with map_size="tall" %}
+            {% if unlocated %}<div class="note-line mt-2"><i class="bi bi-exclamation-circle"></i><span>{{ unlocated }} complaint{{ unlocated|pluralize }} in this period have no ward on record, so they are not on the map.</span></div>{% endif %}
+        </div>
+    </div>
+
+    <div class="col-xl-6 order-xl-1">
+        <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3">
+            <div class="seg" id="zoneTabs">
+                <button type="button" class="on" data-zone="">All zones</button>
+                <button type="button" data-zone="WEST">West</button>
+                <button type="button" data-zone="CENTRAL">Central</button>
+                <button type="button" data-zone="EAST">East</button>
+            </div>
+            <div class="form-check form-switch small m-0">
+                <input class="form-check-input" type="checkbox" id="onlyActive">
+                <label class="form-check-label" for="onlyActive">Hide wards with no complaints</label>
+            </div>
+        </div>
+
+        <div class="row g-2" id="wardGrid">
+            {% for w in wards %}
+            <div class="col-sm-6 ward-col" data-zone="{{ w.zone_key }}" data-count="{{ w.count }}">
+                <a class="ward-card heat-{{ w.heat }} {% if not w.count %}empty{% endif %}" href="{% url 'ward_detail' w.number %}{% if window != 'all' %}?window={{ window }}{% endif %}">
+                    <div class="d-flex justify-content-between align-items-start gap-2">
+                        <div style="min-width:0">
+                            <div class="ward-no">Ward {{ w.number }} · {{ w.zone }}</div>
+                            <div class="ward-nm">{{ w.name }}</div>
+                        </div>
+                        <div class="text-end"><div class="ward-ct">{{ w.count }}</div>{% if w.urgent %}<span class="pill bad mt-1">{{ w.urgent }} urgent</span>{% endif %}</div>
+                    </div>
+                    {% if w.count %}
+                    <div class="brk-track mt-2"><div class="brk-fill" style="width: {{ w.width }}%"></div></div>
+                    <div class="small text-muted mt-1 text-truncate"><i class="bi bi-tag me-1"></i>{{ w.top_issue|title }}</div>
+                    {% else %}<div class="small text-muted mt-2">No complaints</div>{% endif %}
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    var zone = '', onlyActive = false;
+    function apply() {
+        document.querySelectorAll('.ward-col').forEach(function (el) {
+            var okZone = !zone || el.dataset.zone === zone;
+            var okCount = !onlyActive || Number(el.dataset.count) > 0;
+            el.style.display = (okZone && okCount) ? '' : 'none';
+        });
+    }
+    document.querySelectorAll('#zoneTabs button').forEach(function (b) {
+        b.addEventListener('click', function () {
+            document.querySelectorAll('#zoneTabs button').forEach(function (x) { x.classList.remove('on'); });
+            b.classList.add('on'); zone = b.dataset.zone; apply();
+        });
+    });
+    document.getElementById('onlyActive').addEventListener('change', function (e) { onlyActive = e.target.checked; apply(); });
+})();
+</script>
+{% endblock %}

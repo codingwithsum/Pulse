@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% load pulse_extras %}
+
+{% block title %}Departments | PULSE — Rajkot Municipal Corporation{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <div>
+        <h2>Department Workload</h2>
+        <div class="page-sub">{{ total }} complaint{{ total|pluralize }} · {{ window_label }} · data up to {{ anchor|date:"d M Y" }}</div>
+    </div>
+    {% include "partials/_window.html" %}
+</div>
+
+<!-- Highlight row: common issues + share -->
+<div class="row g-4 mb-4">
+    <div class="col-lg-7">
+        <div class="simple-card h-100 mb-0">
+            <div class="simple-card-header">
+                <h3 class="simple-card-title"><i class="bi bi-fire text-danger"></i> Most common issues</h3>
+                <span class="small text-muted">{{ window_label }}</span>
+            </div>
+            {% for i in issues %}
+            <a class="issue-row text-decoration-none {% if forloop.counter <= 3 %}top{% endif %}" href="{% url 'feedback_inbox' %}?{% if i.category_id %}category={{ i.category_id }}&{% endif %}window={{ window }}">
+                <span class="issue-rank">{{ i.rank }}</span>
+                <span>
+                    <span class="issue-name d-block">{{ i.name|title }}</span>
+                    <span class="issue-meta d-block mb-1">{{ i.dept }} · {{ i.share }}% of all complaints</span>
+                    <span class="brk-track d-block"><span class="brk-fill d-block" style="width: {{ i.width }}%"></span></span>
+                </span>
+                <span>
+                    <span class="issue-count d-block">{{ i.count }}</span>
+                    <span class="d-block text-end">{% include "partials/_delta.html" with change=i.change %}</span>
+                </span>
+            </a>
+            {% empty %}<div class="text-muted small py-4 text-center">No complaints in this period.</div>{% endfor %}
+        </div>
+    </div>
+    <div class="col-lg-5">
+        <div class="simple-card h-100 mb-0">
+            <div class="simple-card-header">
+                <h3 class="simple-card-title"><i class="bi bi-pie-chart-fill text-primary"></i> Complaint share</h3>
+                <span class="small text-muted">by department</span>
+            </div>
+            <div class="donut-wrap">
+                <div class="donut" style="background: conic-gradient({{ donut }});">
+                    <div class="donut-center"><strong>{{ total }}</strong><span>complaints</span></div>
+                </div>
+                <div class="legend">
+                    {% for s in share %}
+                    <div class="legend-row"><i style="background: {{ s.color }}"></i><span class="nm">{{ s.name }}</span><span class="text-muted">{{ s.count }}</span><span class="pc">{{ s.pct }}%</span></div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Department cards -->
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <h3 class="fw-bold fs-5 mb-0" style="color: var(--pulse-brand)">By department <span class="text-muted fw-normal fs-6">({{ cards|length }} active)</span></h3>
+    <div class="seg">
+        <a href="{% qs_with sort='volume' %}" class="{% if sort == 'volume' %}on{% endif %}">Most complaints</a>
+        <a href="{% qs_with sort='urgent' %}" class="{% if sort == 'urgent' %}on{% endif %}">Most urgent</a>
+        <a href="{% qs_with sort='sentiment' %}" class="{% if sort == 'sentiment' %}on{% endif %}">Unhappiest</a>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    {% for c in cards %}
+    <div class="col-md-6 col-xl-4">
+        <a class="dept-card {% if forloop.first and sort == 'volume' %}rank-1{% endif %}" href="{% url 'feedback_inbox' %}?dept={{ c.id }}&window={{ window }}">
+            <div class="d-flex gap-3 align-items-start mb-3">
+                <span class="dept-ico"><i class="bi {{ c.icon }}"></i></span>
+                <div class="flex-grow-1" style="min-width:0">
+                    <div class="dept-name">{{ c.name }}</div>
+                    <div class="dept-head">{{ c.head|default:"Branch head" }}</div>
+                </div>
+                <span class="pill {{ c.sentiment_tone }}">{{ c.sentiment_label }}</span>
+            </div>
+            <div class="d-flex align-items-end justify-content-between mb-2">
+                <div><span class="dept-count">{{ c.count }}</span> <span class="text-muted small">complaints</span></div>
+                {% include "partials/_delta.html" with change=c.change %}
+            </div>
+            <div class="brk-track mb-3"><div class="brk-fill" style="width: {{ c.width }}%"></div></div>
+            <div class="dept-foot d-flex justify-content-between gap-2">
+                <span class="text-truncate" title="{{ c.top_issue }}"><i class="bi bi-tag me-1"></i>{{ c.top_issue|title }}</span>
+                <span class="text-nowrap">{% if c.urgent %}<strong class="text-danger">{{ c.urgent }} urgent</strong>{% else %}{{ c.share }}% share{% endif %}</span>
+            </div>
+        </a>
+    </div>
+    {% empty %}
+    <div class="col-12"><div class="simple-card text-center text-muted py-5 mb-0">No department received complaints in this period.</div></div>
+    {% endfor %}
+</div>
+
+{% if quiet %}
+<div class="simple-card">
+    <div class="eyebrow mb-2">No complaints in this period</div>
+    <div class="d-flex flex-wrap gap-2">
+        {% for q in quiet %}<span class="pill muted">{{ q.name }}</span>{% endfor %}
+    </div>
+</div>
+{% endif %}
+{% endblock %}

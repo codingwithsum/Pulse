@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}Notification Settings | PULSE — Rajkot Municipal Corporation{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold mb-1" style="color: var(--pulse-brand);">Staff Email Alerts</h2>
+        <div class="text-muted small">Configure email alerts for life-safety emergencies.</div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-lg-8">
+        <div class="simple-card">
+            <div class="simple-card-header">
+                <h3 class="simple-card-title">
+                    <i class="bi bi-bell"></i> Alert Settings for {{ settings.staff_name }}
+                </h3>
+                <span class="small text-muted font-monospace">{{ settings.email }}</span>
+            </div>
+
+            <form method="POST" action="{% url 'staff_notifications' %}">
+                {% csrf_token %}
+                <div class="form-check form-switch fs-5 mb-4 p-3 bg-light rounded">
+                    <input class="form-check-input ms-0 me-2" type="checkbox" name="email_enabled" id="emailSwitch" {% if settings.email_enabled %}checked{% endif %}>
+                    <label class="form-check-label fw-bold text-dark fs-6" for="emailSwitch">
+                        Enable Email Alert Delivery
+                    </label>
+                    <div class="small text-muted mt-1">Alerts are sent only to authorized municipal staff; zero citizen emails are ever sent.</div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label small fw-bold text-dark mb-2">When should PULSE email you?</label>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" name="notify_emergency_urgency" id="emergHazard" {% if settings.notify_emergency_urgency %}checked{% endif %}>
+                        <label class="form-check-label text-dark small" for="emergHazard">
+                            <strong>Life-Safety Emergencies</strong> (Open manholes, live sparking wires, water contamination)
+                        </label>
+                    </div>
+
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="dailyDigest" checked>
+                        <label class="form-check-label text-dark small" for="dailyDigest">
+                            <strong>Daily Morning Summary</strong> (Delivered at 08:00 AM IST)
+                        </label>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-simple-primary">
+                    <i class="bi bi-check2"></i> Save Notification Preferences
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="simple-card bg-light">
+            <h4 class="fw-bold text-dark fs-6 mb-2">
+                <i class="bi bi-clock-history me-1"></i> Recent Dispatch
+            </h4>
+            <div class="small text-muted mb-3">
+                Last alert sent: <br><strong class="text-dark">{{ settings.last_email_sent }}</strong>
+            </div>
+
+            <div class="small text-muted pt-2 border-top">
+                <i class="bi bi-shield-check text-success me-1"></i> <strong>Anti-Spam Idempotency:</strong> Identical notifications are automatically blocked within 8 hours to prevent inbox flooding.
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

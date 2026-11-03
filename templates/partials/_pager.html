@@ -1,0 +1,11 @@
+{% load pulse_extras %}
+{% if page.paginator.num_pages > 1 %}
+<div class="pager mt-3">
+    <span class="small text-muted">Showing {{ page.start_index }}–{{ page.end_index }} of {{ page.paginator.count }}</span>
+    <div class="d-flex gap-2 align-items-center">
+        {% if page.has_previous %}<a href="?{{ base_qs }}{% if base_qs %}&{% endif %}page={{ page.previous_page_number }}">&larr; Previous</a>{% else %}<a class="dis">&larr; Previous</a>{% endif %}
+        <span class="cur">Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+        {% if page.has_next %}<a href="?{{ base_qs }}{% if base_qs %}&{% endif %}page={{ page.next_page_number }}">Next &rarr;</a>{% else %}<a class="dis">Next &rarr;</a>{% endif %}
+    </div>
+</div>
+{% endif %}

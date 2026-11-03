@@ -1,0 +1,10 @@
+{% load pulse_extras %}
+{% if change is None %}
+
+{% elif change > 0 %}
+<span class="delta up"><i class="bi bi-arrow-up-right"></i> {{ change }}%</span>
+{% elif change < 0 %}
+<span class="delta down"><i class="bi bi-arrow-down-right"></i> {{ change|abs_val }}%</span>
+{% else %}
+<span class="delta flat"><i class="bi bi-dash"></i> no change</span>
+{% endif %}

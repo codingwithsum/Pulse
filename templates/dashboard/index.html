@@ -1,0 +1,373 @@
+{% extends "base.html" %}
+{% load pulse_extras %}
+
+{% block title %}Dashboard | PULSE — Rajkot Municipal Corporation{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <div>
+        <h2>City Overview</h2>
+        <div class="page-sub">Citizen complaints across Rajkot's 18 wards · data up to {{ anchor|date:"d M Y, H:i" }}</div>
+    </div>
+    <a href="{% url 'feedback_inbox' %}" class="btn-simple-primary"><i class="bi bi-inbox-fill"></i> View all complaints</a>
+</div>
+
+<div class="summary-banner">
+    <i class="bi bi-chat-square-text"></i>
+    <div><div class="summary-kicker">In short</div><p>{{ headline }}</p></div>
+</div>
+
+<!-- Filter: department + category -->
+<form method="GET" class="filter-bar compact">
+    <div class="row g-2 align-items-end">
+        {% include "partials/_filter_selects.html" %}
+        {% if active_dept or active_category %}
+        <div class="col-auto"><a href="{% url 'dashboard' %}" class="btn-simple-secondary py-2">Clear filter</a></div>
+        {% endif %}
+        <div class="col text-end small text-muted align-self-center">
+            Showing {% if active_category %}<strong>{{ active_category.name|title }}</strong>{% elif active_dept %}<strong>{{ active_dept.name }}</strong>{% else %}<strong>all categories</strong>{% endif %}
+        </div>
+    </div>
+</form>
+
+<div class="sec-head"><span class="sec-num">1</span><div><h3>How many complaints are coming in?</h3><div class="sec-sub">Total complaints received, compared with the period just before. Bars show the trend over time.</div></div></div>
+{% include "partials/_hero.html" %}
+
+<div class="sec-head"><span class="sec-num">2</span><div><h3>What needs action now?</h3><div class="sec-sub">Complaints staff should act on first, and issues that are growing.</div></div></div>
+<div class="row g-3 mb-4">
+    <div class="col-sm-6">
+        <a class="tile" href="{% url 'feedback_inbox' %}?urgency=EMERGENCY">
+            <span class="tile-icon bad"><i class="bi bi-exclamation-octagon"></i></span>
+            <span><span class="tile-num d-block">{{ urgent_count }}</span><span class="tile-label">Urgent complaints (last 7 days)</span></span>
+            <i class="bi bi-chevron-right ms-auto text-muted"></i>
+        </a>
+    </div>
+    <div class="col-sm-6">
+        <a class="tile" href="{% url 'feedback_inbox' %}?status=pending">
+            <span class="tile-icon blue"><i class="bi bi-clipboard-check"></i></span>
+            <span><span class="tile-num d-block">{{ review_count }}</span><span class="tile-label">Waiting for staff to verify</span></span>
+            <i class="bi bi-chevron-right ms-auto text-muted"></i>
+        </a>
+    </div>
+</div>
+
+{% include "partials/_rising.html" %}
+
+<div class="sec-head"><span class="sec-num">3</span><div><h3>What are people complaining about, and where?</h3><div class="sec-sub">Top issues and busiest wards for the last 7 days. Darker areas on the map mean more complaints.</div></div></div>
+<div class="row g-4 mb-4">
+    <div class="col-lg-7">
+        <div class="simple-card h-100 mb-0">
+            <div class="simple-card-header">
+                <h3 class="simple-card-title"><i class="bi bi-geo-alt"></i> Where complaints are coming from</h3>
+                <a href="{% url 'location_analytics' %}" class="small text-muted text-decoration-none">All wards &rarr;</a>
+            </div>
+            {% include "partials/_map.html" with map_size="short" %}
+        </div>
+    </div>
+    <div class="col-lg-5 d-flex flex-column gap-4">
+        <div class="simple-card mb-0">
+            <div class="simple-card-header">
+                <h3 class="simple-card-title"><i class="bi bi-list-ol"></i> Most common issues (last 7 days)</h3>
+            </div>
+            <div class="brk">
+                {% for c in top_categories %}
+                <a class="brk-row text-decoration-none" href="{% url 'feedback_inbox' %}?category={{ c.id }}">
+                    <div class="brk-top"><span class="brk-name">{{ c.name|title }}</span><strong class="text-dark">{{ c.count }}</strong></div>
+                    <div class="brk-track"><div class="brk-fill" style="width: {{ c.width }}%"></div></div>
+                </a>
+                {% empty %}<div class="text-muted small">No complaints this week.</div>{% endfor %}
+            </div>
+        </div>
+        <div class="simple-card mb-0">
+            <div class="simple-card-header">
+                <h3 class="simple-card-title"><i class="bi bi-pin-map"></i> Wards with most complaints (last 7 days)</h3>
+            </div>
+            <div class="d-flex flex-column gap-2">
+                {% for w in top_wards %}
+                <a href="{% url 'ward_detail' w.number %}" class="d-flex justify-content-between align-items-center text-decoration-none py-1">
+                    <span class="text-dark small"><strong>Ward {{ w.number }}</strong> · {{ w.name }}</span>
+                    <span class="pill {% if w.urgent %}bad{% else %}blue{% endif %}">{{ w.count }}</span>
+                </a>
+                {% empty %}<div class="text-muted small">No complaints with an identified ward this week.</div>{% endfor %}
+            </div>
+            {% if unlocated %}<div class="note-line mt-3"><i class="bi bi-info-circle"></i><span>{{ unlocated }} more this week have no ward on record.</span></div>{% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- =======================================================================
+     Section 4: Complaint Source Analytics (Resource-wise Tracking)
+     ======================================================================= -->
+<div class="sec-head">
+    <span class="sec-num">4</span>
+    <div>
+        <h3>Complaint Source Analytics</h3>
+        <div class="sec-sub">Automatic tracking across Social Media (Twitter & Facebook), Via Email (Gmail), and Official Website.</div>
+    </div>
+</div>
+
+<!-- 1. Resource KPI Stat Tiles -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <a class="tile h-100" href="{% url 'feedback_inbox' %}?source=social">
+            <span class="tile-icon blue"><i class="bi bi-share-fill"></i></span>
+            <span class="w-100">
+                <span class="d-flex justify-content-between align-items-baseline">
+                    <span class="tile-num">{{ source_analytics.total_social }}</span>
+                    <span class="pill blue">{{ source_analytics.social_pct }}%</span>
+                </span>
+                <span class="tile-label fw-bold text-dark">Social Media Complaints</span>
+                <span class="d-block small text-muted mt-1">
+                    <i class="bi bi-twitter-x me-1"></i>Twitter: <strong>{{ source_analytics.twitter_count }}</strong> · 
+                    <i class="bi bi-facebook me-1"></i>Facebook: <strong>{{ source_analytics.facebook_count }}</strong>
+                </span>
+            </span>
+        </a>
+    </div>
+    <div class="col-md-4">
+        <a class="tile h-100" href="{% url 'feedback_inbox' %}?source=email">
+            <span class="tile-icon mid"><i class="bi bi-envelope-at-fill text-danger"></i></span>
+            <span class="w-100">
+                <span class="d-flex justify-content-between align-items-baseline">
+                    <span class="tile-num">{{ source_analytics.total_email }}</span>
+                    <span class="pill mid">{{ source_analytics.email_pct }}%</span>
+                </span>
+                <span class="tile-label fw-bold text-dark">Via Email Complaints</span>
+                <span class="d-block small text-muted mt-1">
+                    <i class="bi bi-google me-1 text-danger"></i>Gmail / Authorized Municipal Inbox
+                </span>
+            </span>
+        </a>
+    </div>
+    <div class="col-md-4">
+        <a class="tile h-100" href="{% url 'feedback_inbox' %}?source=website">
+            <span class="tile-icon good"><i class="bi bi-globe2 text-success"></i></span>
+            <span class="w-100">
+                <span class="d-flex justify-content-between align-items-baseline">
+                    <span class="tile-num">{{ source_analytics.total_website }}</span>
+                    <span class="pill good">{{ source_analytics.website_pct }}%</span>
+                </span>
+                <span class="tile-label fw-bold text-dark">Official Website Complaints</span>
+                <span class="d-block small text-muted mt-1">
+                    <i class="bi bi-building me-1"></i>RMC Grievance Submission Portal
+                </span>
+            </span>
+        </a>
+    </div>
+</div>
+
+<!-- 2. Breakdown & Share Row -->
+<div class="row g-4 mb-4">
+    <!-- Left: Resource-wise Complaint Percentage -->
+    <div class="col-lg-6">
+        <div class="simple-card h-100 mb-0">
+            <div class="simple-card-header">
+                <h3 class="simple-card-title"><i class="bi bi-pie-chart-fill text-primary"></i> Resource-wise Complaint Percentage</h3>
+                <span class="small text-muted">All Tracked Sources</span>
+            </div>
+            <div class="donut-wrap">
+                <div class="donut" style="background: conic-gradient({{ source_analytics.donut_gradient }});">
+                    <div class="donut-center">
+                        <strong>{{ source_analytics.total_tracked }}</strong>
+                        <span>complaints</span>
+                    </div>
+                </div>
+                <div class="legend flex-grow-1">
+                    {% for r in source_analytics.resources %}
+                    <a href="{% url 'feedback_inbox' %}?source={{ r.key }}" class="legend-row text-decoration-none">
+                        <i style="background: {{ r.color }}"></i>
+                        <span class="nm text-dark fw-medium">{{ r.name }}</span>
+                        <span class="text-muted">{{ r.count }}</span>
+                        <span class="pc fw-bold text-dark">{{ r.pct }}%</span>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right: Twitter vs Facebook Breakdown -->
+    <div class="col-lg-6">
+        <div class="simple-card h-100 mb-0">
+            <div class="simple-card-header">
+                <h3 class="simple-card-title"><i class="bi bi-share text-info"></i> Twitter vs Facebook Breakdown</h3>
+                <span class="small text-muted">Social Media Channels</span>
+            </div>
+            <div class="p-3">
+                <div class="mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="fw-semibold text-dark"><i class="bi bi-twitter-x text-dark me-2"></i>Twitter (X)</span>
+                        <span><strong class="text-dark">{{ source_analytics.twitter_count }}</strong> <span class="text-muted small">({{ source_analytics.twitter_pct }}%)</span></span>
+                    </div>
+                    <div class="brk-track" style="height: 10px;">
+                        <div class="brk-fill" style="width: {{ source_analytics.twitter_pct }}%; background: #1d9bf0;"></div>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="fw-semibold text-dark"><i class="bi bi-facebook text-primary me-2"></i>Facebook</span>
+                        <span><strong class="text-dark">{{ source_analytics.facebook_count }}</strong> <span class="text-muted small">({{ source_analytics.facebook_pct }}%)</span></span>
+                    </div>
+                    <div class="brk-track" style="height: 10px;">
+                        <div class="brk-fill" style="width: {{ source_analytics.facebook_pct }}%; background: #1877f2;"></div>
+                    </div>
+                </div>
+
+                {% if source_analytics.whatsapp_count %}
+                <div class="mb-2">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="fw-semibold text-dark"><i class="bi bi-whatsapp text-success me-2"></i>WhatsApp Business API</span>
+                        <span><strong class="text-dark">{{ source_analytics.whatsapp_count }}</strong></span>
+                    </div>
+                </div>
+                {% endif %}
+
+                <div class="d-flex gap-2 mt-4 pt-2 border-top">
+                    <a href="{% url 'feedback_inbox' %}?source=twitter" class="btn-simple-secondary btn-sm py-1 px-3">
+                        <i class="bi bi-twitter-x me-1"></i> Filter Twitter
+                    </a>
+                    <a href="{% url 'feedback_inbox' %}?source=facebook" class="btn-simple-secondary btn-sm py-1 px-3">
+                        <i class="bi bi-facebook text-primary me-1"></i> Filter Facebook
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 3. Sentiment & Category Analysis Row -->
+<div class="row g-4 mb-4">
+    <!-- Resource-wise Sentiment Analysis -->
+    <div class="col-lg-6">
+        <div class="simple-card h-100 mb-0">
+            <div class="simple-card-header">
+                <h3 class="simple-card-title"><i class="bi bi-emoji-smile text-warning"></i> Resource-wise Sentiment Analysis</h3>
+                <span class="small text-muted">Polarity breakdown per source</span>
+            </div>
+            <div class="table-responsive">
+                <table class="simple-table mb-0">
+                    <thead>
+                        <tr>
+                            <th>Resource</th>
+                            <th class="text-center text-success">Positive</th>
+                            <th class="text-center text-secondary">Neutral</th>
+                            <th class="text-center text-danger">Negative</th>
+                            <th class="text-end">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for s in source_analytics.sentiments %}
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="bi {{ s.icon }}" style="color: {{ s.color }};"></i>
+                                    <strong class="text-dark">{{ s.name }}</strong>
+                                </div>
+                            </td>
+                            <td class="text-center">
+                                <span class="pill good">{{ s.positive }} ({{ s.positive_pct }}%)</span>
+                            </td>
+                            <td class="text-center">
+                                <span class="pill mid">{{ s.neutral }} ({{ s.neutral_pct }}%)</span>
+                            </td>
+                            <td class="text-center">
+                                <span class="pill bad">{{ s.negative }} ({{ s.negative_pct }}%)</span>
+                            </td>
+                            <td class="text-end fw-bold text-dark">{{ s.total }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="5" class="text-muted text-center py-3">No sentiment data available.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Resource-wise Category Analysis -->
+    <div class="col-lg-6">
+        <div class="simple-card h-100 mb-0">
+            <div class="simple-card-header">
+                <h3 class="simple-card-title"><i class="bi bi-tags text-primary"></i> Resource-wise Category Analysis</h3>
+                <span class="small text-muted">Top issues by intake channel</span>
+            </div>
+            <div class="p-3 d-flex flex-column gap-3">
+                {% for ca in source_analytics.category_analysis %}
+                <div class="border rounded p-2.5 bg-light">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <strong class="text-dark"><i class="bi {{ ca.icon }} me-1" style="color: {{ ca.color }}"></i>{{ ca.name }}</strong>
+                        <span class="small text-muted">{{ ca.total }} complaints</span>
+                    </div>
+                    <div class="d-flex flex-column gap-1">
+                        {% for c in ca.categories %}
+                        <div class="d-flex justify-content-between align-items-center small py-0.5">
+                            <span class="text-secondary text-truncate" style="max-width: 70%;">• {{ c.name }}</span>
+                            <span class="fw-semibold text-dark">{{ c.count }} <span class="text-muted fw-normal">({{ c.pct }}%)</span></span>
+                        </div>
+                        {% empty %}
+                        <div class="text-muted small">No categorized items yet.</div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 4. Monthly Source-wise Complaint Trends -->
+<div class="simple-card mb-4">
+    <div class="simple-card-header">
+        <h3 class="simple-card-title"><i class="bi bi-graph-up-arrow text-success"></i> Monthly Source-wise Complaint Trends</h3>
+        <span class="small text-muted">Monthly trajectory across all intake resources</span>
+    </div>
+    <div class="table-responsive">
+        <table class="simple-table mb-0">
+            <thead>
+                <tr>
+                    <th>Month</th>
+                    <th><i class="bi bi-share text-primary me-1"></i>Social Media</th>
+                    <th><i class="bi bi-envelope text-danger me-1"></i>Via Email</th>
+                    <th><i class="bi bi-globe text-success me-1"></i>Official Website</th>
+                    <th class="text-end">Total Complaints</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for m in source_analytics.monthly_trends %}
+                <tr>
+                    <td><strong>{{ m.month_label }}</strong></td>
+                    <td>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="fw-bold text-dark">{{ m.social }}</span>
+                            <div class="brk-track flex-grow-1" style="height: 6px; max-width: 120px;">
+                                <div class="brk-fill" style="width: {{ m.social_h }}%; background: #1d9bf0;"></div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="fw-bold text-dark">{{ m.email }}</span>
+                            <div class="brk-track flex-grow-1" style="height: 6px; max-width: 120px;">
+                                <div class="brk-fill" style="width: {{ m.email_h }}%; background: #ea4335;"></div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="fw-bold text-dark">{{ m.website }}</span>
+                            <div class="brk-track flex-grow-1" style="height: 6px; max-width: 120px;">
+                                <div class="brk-fill" style="width: {{ m.website_h }}%; background: #0d6efd;"></div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="text-end"><span class="badge bg-dark fs-6">{{ m.total }}</span></td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="5" class="text-muted text-center py-3">No monthly trend data available.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
