@@ -127,8 +127,9 @@ class WhatsAppCloudApiConnector(BaseConnector):
                             is_synthetic=False,
                             status="PENDING_ANALYSIS"
                         )
-                        analyze_and_store_feedback(item)
-                        created_items.append(item)
+                    # Run AI analysis outside the transaction lock so DB is not held during LLM call
+                    analyze_and_store_feedback(item)
+                    created_items.append(item)
 
         # Update last sync timestamp
         data_source.last_sync_at = timezone.now()

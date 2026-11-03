@@ -142,8 +142,8 @@ class FileImportConnector(BaseConnector):
                         is_synthetic=payload.is_synthetic,
                         status="PENDING_ANALYSIS"
                     )
-                    # Trigger immediate AI classification
-                    analyze_and_store_feedback(item)
+                # Trigger AI classification outside atomic transaction
+                analyze_and_store_feedback(item)
 
                 result.new_items_count += 1
 

@@ -186,11 +186,11 @@
         </div>
     </div>
 
-    <!-- Right: Twitter vs Facebook Breakdown -->
+    <!-- Right: Twitter vs Facebook + WhatsApp Breakdown -->
     <div class="col-lg-6">
         <div class="simple-card h-100 mb-0">
             <div class="simple-card-header">
-                <h3 class="simple-card-title"><i class="bi bi-share text-info"></i> Twitter vs Facebook Breakdown</h3>
+                <h3 class="simple-card-title"><i class="bi bi-share text-info"></i> Social Media Platform Breakdown</h3>
                 <span class="small text-muted">Social Media Channels</span>
             </div>
             <div class="p-3">
@@ -214,160 +214,30 @@
                     </div>
                 </div>
 
-                {% if source_analytics.whatsapp_count %}
                 <div class="mb-2">
                     <div class="d-flex justify-content-between align-items-center mb-1">
                         <span class="fw-semibold text-dark"><i class="bi bi-whatsapp text-success me-2"></i>WhatsApp Business API</span>
-                        <span><strong class="text-dark">{{ source_analytics.whatsapp_count }}</strong></span>
+                        <span><strong class="text-dark">{{ source_analytics.whatsapp_count }}</strong> <span class="text-muted small">({{ source_analytics.whatsapp_pct }}%)</span></span>
+                    </div>
+                    <div class="brk-track" style="height: 10px;">
+                        <div class="brk-fill" style="width: {{ source_analytics.whatsapp_pct }}%; background: #25d366;"></div>
                     </div>
                 </div>
-                {% endif %}
 
-                <div class="d-flex gap-2 mt-4 pt-2 border-top">
+                <div class="d-flex gap-2 mt-4 pt-2 border-top flex-wrap">
                     <a href="{% url 'feedback_inbox' %}?source=twitter" class="btn-simple-secondary btn-sm py-1 px-3">
                         <i class="bi bi-twitter-x me-1"></i> Filter Twitter
                     </a>
                     <a href="{% url 'feedback_inbox' %}?source=facebook" class="btn-simple-secondary btn-sm py-1 px-3">
                         <i class="bi bi-facebook text-primary me-1"></i> Filter Facebook
                     </a>
+                    <a href="{% url 'feedback_inbox' %}?source=whatsapp" class="btn-simple-secondary btn-sm py-1 px-3">
+                        <i class="bi bi-whatsapp text-success me-1"></i> Filter WhatsApp
+                    </a>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- 3. Sentiment & Category Analysis Row -->
-<div class="row g-4 mb-4">
-    <!-- Resource-wise Sentiment Analysis -->
-    <div class="col-lg-6">
-        <div class="simple-card h-100 mb-0">
-            <div class="simple-card-header">
-                <h3 class="simple-card-title"><i class="bi bi-emoji-smile text-warning"></i> Resource-wise Sentiment Analysis</h3>
-                <span class="small text-muted">Polarity breakdown per source</span>
-            </div>
-            <div class="table-responsive">
-                <table class="simple-table mb-0">
-                    <thead>
-                        <tr>
-                            <th>Resource</th>
-                            <th class="text-center text-success">Positive</th>
-                            <th class="text-center text-secondary">Neutral</th>
-                            <th class="text-center text-danger">Negative</th>
-                            <th class="text-end">Total</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for s in source_analytics.sentiments %}
-                        <tr>
-                            <td>
-                                <div class="d-flex align-items-center gap-2">
-                                    <i class="bi {{ s.icon }}" style="color: {{ s.color }};"></i>
-                                    <strong class="text-dark">{{ s.name }}</strong>
-                                </div>
-                            </td>
-                            <td class="text-center">
-                                <span class="pill good">{{ s.positive }} ({{ s.positive_pct }}%)</span>
-                            </td>
-                            <td class="text-center">
-                                <span class="pill mid">{{ s.neutral }} ({{ s.neutral_pct }}%)</span>
-                            </td>
-                            <td class="text-center">
-                                <span class="pill bad">{{ s.negative }} ({{ s.negative_pct }}%)</span>
-                            </td>
-                            <td class="text-end fw-bold text-dark">{{ s.total }}</td>
-                        </tr>
-                        {% empty %}
-                        <tr><td colspan="5" class="text-muted text-center py-3">No sentiment data available.</td></tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
-    <!-- Resource-wise Category Analysis -->
-    <div class="col-lg-6">
-        <div class="simple-card h-100 mb-0">
-            <div class="simple-card-header">
-                <h3 class="simple-card-title"><i class="bi bi-tags text-primary"></i> Resource-wise Category Analysis</h3>
-                <span class="small text-muted">Top issues by intake channel</span>
-            </div>
-            <div class="p-3 d-flex flex-column gap-3">
-                {% for ca in source_analytics.category_analysis %}
-                <div class="border rounded p-2.5 bg-light">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <strong class="text-dark"><i class="bi {{ ca.icon }} me-1" style="color: {{ ca.color }}"></i>{{ ca.name }}</strong>
-                        <span class="small text-muted">{{ ca.total }} complaints</span>
-                    </div>
-                    <div class="d-flex flex-column gap-1">
-                        {% for c in ca.categories %}
-                        <div class="d-flex justify-content-between align-items-center small py-0.5">
-                            <span class="text-secondary text-truncate" style="max-width: 70%;">• {{ c.name }}</span>
-                            <span class="fw-semibold text-dark">{{ c.count }} <span class="text-muted fw-normal">({{ c.pct }}%)</span></span>
-                        </div>
-                        {% empty %}
-                        <div class="text-muted small">No categorized items yet.</div>
-                        {% endfor %}
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- 4. Monthly Source-wise Complaint Trends -->
-<div class="simple-card mb-4">
-    <div class="simple-card-header">
-        <h3 class="simple-card-title"><i class="bi bi-graph-up-arrow text-success"></i> Monthly Source-wise Complaint Trends</h3>
-        <span class="small text-muted">Monthly trajectory across all intake resources</span>
-    </div>
-    <div class="table-responsive">
-        <table class="simple-table mb-0">
-            <thead>
-                <tr>
-                    <th>Month</th>
-                    <th><i class="bi bi-share text-primary me-1"></i>Social Media</th>
-                    <th><i class="bi bi-envelope text-danger me-1"></i>Via Email</th>
-                    <th><i class="bi bi-globe text-success me-1"></i>Official Website</th>
-                    <th class="text-end">Total Complaints</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for m in source_analytics.monthly_trends %}
-                <tr>
-                    <td><strong>{{ m.month_label }}</strong></td>
-                    <td>
-                        <div class="d-flex align-items-center gap-2">
-                            <span class="fw-bold text-dark">{{ m.social }}</span>
-                            <div class="brk-track flex-grow-1" style="height: 6px; max-width: 120px;">
-                                <div class="brk-fill" style="width: {{ m.social_h }}%; background: #1d9bf0;"></div>
-                            </div>
-                        </div>
-                    </td>
-                    <td>
-                        <div class="d-flex align-items-center gap-2">
-                            <span class="fw-bold text-dark">{{ m.email }}</span>
-                            <div class="brk-track flex-grow-1" style="height: 6px; max-width: 120px;">
-                                <div class="brk-fill" style="width: {{ m.email_h }}%; background: #ea4335;"></div>
-                            </div>
-                        </div>
-                    </td>
-                    <td>
-                        <div class="d-flex align-items-center gap-2">
-                            <span class="fw-bold text-dark">{{ m.website }}</span>
-                            <div class="brk-track flex-grow-1" style="height: 6px; max-width: 120px;">
-                                <div class="brk-fill" style="width: {{ m.website_h }}%; background: #0d6efd;"></div>
-                            </div>
-                        </div>
-                    </td>
-                    <td class="text-end"><span class="badge bg-dark fs-6">{{ m.total }}</span></td>
-                </tr>
-                {% empty %}
-                <tr><td colspan="5" class="text-muted text-center py-3">No monthly trend data available.</td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</div>
 {% endblock %}

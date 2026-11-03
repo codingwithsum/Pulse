@@ -117,68 +117,82 @@ class LocalCivicAnalyzer(BaseCivicAnalyzer):
         lower_text = text.lower()
         lang = self.detect_language(text)
 
-        # 1. Department & Category Heuristics
-        dept_code = "solid-waste-management"
-        cat_code = "miscellaneous"
+        # 1. Department & Category Heuristics (codes matched to actual DB)
+        dept_code = "solid-waste"
+        cat_code = "garbage-overflow"
         theme = "General Civic Inquiry"
         confidence = 0.75
 
         # DRAINAGE
-        if any(w in lower_text for w in ["ગટર", "મેનહોલ", "ચોકઅપ", "ઉભરાય", "sewage", "gutter", "drainage", "overflow", "blackwater", "choke"]):
-            dept_code = "drainage-chockup-overflow"
-            cat_code = "main-line-overflowing"
+        if any(w in lower_text for w in ["ગટર", "મેનહોલ", "ચોકઅપ", "ઉભરાય", "sewage", "gutter", "drainage", "overflow", "blackwater", "choke", "manhole"]):
+            dept_code = "drainage-sewerage"
+            cat_code = "manhole-overflow"
             theme = "Manhole & Sewer Overflow"
             confidence = 0.92
 
         # ROSHNI / STREETLIGHTS
         elif any(w in lower_text for w in ["લાઈટ", "અંધારું", "થાંભલો", "streetlight", "light", "dark", "pole", "led", "bulb"]):
-            dept_code = "roshni-branch"
-            cat_code = "led-tl-not-functioning"
+            dept_code = "traffic-streetlighting"
+            cat_code = "streetlight-off"
             theme = "Streetlight Failure"
             confidence = 0.94
 
         # WATER WORKS
         elif any(w in lower_text for w in ["પાણી", "પીવાનું પાણી", "ગંદુ પાણી", "લીકેજ", "પ્રેશર", "water", "drinking water", "pipeline leak", "low force", "polluted water", "paani", "peene", "pani"]):
-            dept_code = "water-works-outdoor"
+            dept_code = "water-works"
             if "ગંદુ" in lower_text or "polluted" in lower_text or "contamination" in lower_text or "badbudaar" in lower_text:
-                cat_code = "polluted-water"
+                cat_code = "water-contamination"
                 theme = "Drinking Water Contamination"
             else:
-                cat_code = "pipeline-leakage"
+                cat_code = "pipeline-leak"
                 theme = "Water Supply & Pipeline Leak"
             confidence = 0.91
 
-        # ROADS & CIVIL / BANDHKAM
+        # ROADS & CIVIL
         elif any(w in lower_text for w in ["ખાડા", "ખાડો", "રસ્તો", "તૂટેલો", "ડામર", "પેવર બ્લોક", "pothole", "broken road", "asphalt", "bitumen", "footpath", "cave-in"]):
-            dept_code = "bandhkam-civil-roads"
-            cat_code = "pothole-bitumen-damage"
-            theme = "Potholes & Road Damage"
+            dept_code = "engineering-roads"
+            if "footpath" in lower_text:
+                cat_code = "footpath"
+                theme = "Footpath Damage"
+            else:
+                cat_code = "potholes"
+                theme = "Potholes & Road Damage"
             confidence = 0.93
 
         # SOLID WASTE
         elif any(w in lower_text for w in ["કચરો", "કચરાપેટી", "ગંદકી", "ડમ્પિંગ", "ટીપર", "garbage", "trash", "dustbin", "waste", "sweeping", "swachhata"]):
-            dept_code = "solid-waste-management"
-            cat_code = "sweeping-not-done"
-            theme = "Garbage Collection & Sweeping"
+            dept_code = "solid-waste"
+            if "van" in lower_text or "tipper" in lower_text or "ટીપર" in lower_text:
+                cat_code = "door-to-door-van"
+                theme = "Door-to-Door Van Not Coming"
+            else:
+                cat_code = "garbage-overflow"
+                theme = "Garbage Collection & Sweeping"
             confidence = 0.90
 
         # ANIMALS / CATTLE / DOGS
-        elif any(w in lower_text for w in ["ઢોર", "ગાય", "આખલો", "કૂતરા", "cattle", "cow", "bull", "dog", "dhor", "stray"]):
-            dept_code = "ancd-animal-control"
-            cat_code = "catch-the-animal-dhor-pakadva"
+        elif any(w in lower_text for w in ["ઢોર", "ગાય", "આખલો", "cattle", "cow", "bull", "stray"]):
+            dept_code = "traffic-streetlighting"
+            cat_code = "stray-cattle"
             theme = "Stray Animals & Cattle Control"
+            confidence = 0.88
+
+        elif any(w in lower_text for w in ["કૂતરા", "dog", "dhor"]):
+            dept_code = "ancd-animal-control"
+            cat_code = "stray-cattle"
+            theme = "Stray Dog Control"
             confidence = 0.88
 
         # CONSERVANCY / DEAD ANIMAL
         elif any(w in lower_text for w in ["મરેલું", "મરેલો", "dead animal", "carcass", "dead"]):
             dept_code = "conservancy-dead-animal"
-            cat_code = "dead-animal-removal"
+            cat_code = "garbage-overflow"
             theme = "Dead Animal Carcass Removal"
             confidence = 0.95
 
         # HEALTH / MOSQUITO
         elif any(w in lower_text for w in ["મચ્છર", "મેલેરિયા", "ડેન્ગ્યુ", "દવા છંટકાવ", "mosquito", "fogging", "malaria", "dengue"]):
-            dept_code = "health-urban-maleriya"
+            dept_code = "health-sanitation"
             cat_code = "mosquito-fogging"
             theme = "Mosquito Fogging & Vector Control"
             confidence = 0.89
@@ -186,15 +200,14 @@ class LocalCivicAnalyzer(BaseCivicAnalyzer):
         # CITY BUS
         elif any(w in lower_text for w in ["સિટી બસ", "બીઆરટીએસ", "city bus", "brts", "bus stop"]):
             dept_code = "city-bus-rajpath"
-            cat_code = "bus-service"
+            cat_code = "garbage-overflow"
             theme = "City Bus Service"
             confidence = 0.87
 
-        # 2. Urgency Classification with Evidence-Backed Reasoning
+        # 2. Urgency Classification
         urgency = "MEDIUM"
         urgency_reason = "Standard civic grievance logged for routine municipal response."
 
-        # EMERGENCY CHECKS
         if any(w in lower_text for w in ["અકસ્માત", "accident", "સ્લીપ", "slip", "હોસ્પિટલ", "hospital", "ઝાડા", "ઉલટી", "illness", "bimaar", "બિમાર", "વાયર", "કરંટ", "shock", "live wire", "open manhole", "ખુલ્લી ગટર"]):
             urgency = "EMERGENCY"
             urgency_reason = "High hazard safety risk detected: Potential casualty, open electrical hazard, or waterborne illness reported."
@@ -209,7 +222,7 @@ class LocalCivicAnalyzer(BaseCivicAnalyzer):
         # 3. Sentiment Polarity
         pos_words = ["આભાર", "thanks", "thank you", "good", "great", "prompt", "સારું", "સુંદર", "repaired", "solved", "best"]
         neg_words = ["ખાડો", "ગટર", "ગંદકી", "દુર્ગંધ", "બિમાર", "ત્રાસ", "મુશ્કેલ", "ખરાબ", "pothole", "leakage", "dirty", "worst", "smell", "terrible", "accident", "nuisance"]
-        
+
         pos_hits = sum(1 for w in pos_words if w in lower_text)
         neg_hits = sum(1 for w in neg_words if w in lower_text)
 

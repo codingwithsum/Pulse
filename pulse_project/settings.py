@@ -89,6 +89,9 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
+        'OPTIONS': {
+            'timeout': 60,
+        },
     }
 }
 
@@ -137,3 +140,23 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Map tiles (OpenStreetMap) reject requests that carry no Referer; send the origin cross-site.
 SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
+
+# =============================================================================
+# PULSE AI — Ollama Local LLM Configuration
+# =============================================================================
+# Set OLLAMA_MODEL to activate the Ollama-powered civic analyzer.
+# If Ollama is not running or not installed, the system automatically
+# falls back to the built-in LocalCivicAnalyzer (no configuration needed).
+#
+# Recommended model:  llama3.2        (best multilingual, ~2GB RAM)
+# Low-RAM alternative: llama3.2:1b   (~1GB RAM, slightly less accurate)
+#
+# Setup steps:
+#   1. Install Ollama: https://ollama.com/download
+#   2. Pull model:     ollama pull llama3.2
+#   3. Start server:   ollama serve
+#   4. Uncomment the line below:
+#
+# OLLAMA_MODEL = "llama3.2"
+OLLAMA_MODEL    = os.environ.get("OLLAMA_MODEL", "llama3.2")
+OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")

@@ -261,6 +261,8 @@ def apply_filters(qs, f):
             qs = qs.filter(feedback_item__source_platform="TWITTER")
         elif src in ("facebook", "fb", "meta"):
             qs = qs.filter(feedback_item__source_platform="FACEBOOK")
+        elif src in ("whatsapp", "wa", "whatsapp business"):
+            qs = qs.filter(feedback_item__source_platform="WHATSAPP")
     if f.get("source_type"):
         qs = qs.filter(feedback_item__source_type=f["source_type"])
     if f.get("source_platform"):
@@ -484,9 +486,10 @@ def compute_source_analytics(qs, anchor=None):
     twitter_count = qs.filter(feedback_item__source_platform='TWITTER').count()
     facebook_count = qs.filter(feedback_item__source_platform='FACEBOOK').count()
     whatsapp_count = qs.filter(feedback_item__source_platform='WHATSAPP').count()
-    social_breakdown_tot = (twitter_count + facebook_count) or 1
+    social_breakdown_tot = (twitter_count + facebook_count + whatsapp_count) or 1
     twitter_pct = round((twitter_count / social_breakdown_tot) * 100, 1)
     facebook_pct = round((facebook_count / social_breakdown_tot) * 100, 1)
+    whatsapp_pct = round((whatsapp_count / social_breakdown_tot) * 100, 1)
 
     # Resource-wise complaint percentage
     social_pct = round((total_social / total_all) * 100, 1)
@@ -567,9 +570,12 @@ def compute_source_analytics(qs, anchor=None):
             continue
         m_key = (pub.year, pub.month)
         if m_key not in monthly_data:
-            monthly_data[m_key] = {"social": 0, "email": 0, "website": 0, "total": 0, "date": pub}
+            monthly_data[m_key] = {"social": 0, "email": 0, "website": 0, "whatsapp": 0, "total": 0, "date": pub}
         st = a.feedback_item.source_type
-        if st == 'SOCIAL_MEDIA':
+        sp = a.feedback_item.source_platform
+        if sp == 'WHATSAPP':
+            monthly_data[m_key]["whatsapp"] += 1
+        elif st == 'SOCIAL_MEDIA':
             monthly_data[m_key]["social"] += 1
         elif st == 'EMAIL':
             monthly_data[m_key]["email"] += 1
@@ -586,15 +592,18 @@ def compute_source_analytics(qs, anchor=None):
         social_h = round((d["social"] / max_month_total) * 100)
         email_h = round((d["email"] / max_month_total) * 100)
         website_h = round((d["website"] / max_month_total) * 100)
+        whatsapp_h = round((d["whatsapp"] / max_month_total) * 100)
         monthly_trends.append({
             "month_label": d["date"].strftime("%b %Y"),
             "social": d["social"],
             "email": d["email"],
             "website": d["website"],
+            "whatsapp": d["whatsapp"],
             "total": tot,
             "social_h": max(social_h, 6) if d["social"] else 0,
             "email_h": max(email_h, 6) if d["email"] else 0,
             "website_h": max(website_h, 6) if d["website"] else 0,
+            "whatsapp_h": max(whatsapp_h, 6) if d["whatsapp"] else 0,
         })
 
     return {
@@ -612,6 +621,7 @@ def compute_source_analytics(qs, anchor=None):
         "whatsapp_count": whatsapp_count,
         "twitter_pct": twitter_pct,
         "facebook_pct": facebook_pct,
+        "whatsapp_pct": whatsapp_pct,
         "sentiments": sentiments,
         "category_analysis": category_analysis,
         "monthly_trends": monthly_trends,
@@ -1141,17 +1151,20 @@ def integrations_hub_view(request):
                     }]
                 }]
             }
-            data_source = DataSource.objects.filter(source_type="WHATSAPP").first()
-            if not data_source:
-                data_source = DataSource.objects.create(name="WhatsApp Business Cloud API", source_type="WHATSAPP", health_status="HEALTHY")
-            connector = WhatsAppCloudApiConnector()
-            items = connector.handle_incoming_webhook(sim_payload, data_source)
-            if items:
-                act = items[0].analyses.first()
-                dept_name = act.suggested_department.name if act and act.suggested_department else "Civic Services"
-                upload_msg = f"Live WhatsApp message received & analyzed! Assigned to: {dept_name}. Visible now on Dashboard & Inbox."
-            else:
-                upload_msg = "Message received (duplicate detected & safely blocked)."
+            try:
+                data_source = DataSource.objects.filter(source_type="WHATSAPP").first()
+                if not data_source:
+                    data_source = DataSource.objects.create(name="WhatsApp Business Cloud API", source_type="WHATSAPP", health_status="HEALTHY")
+                connector = WhatsAppCloudApiConnector()
+                items = connector.handle_incoming_webhook(sim_payload, data_source)
+                if items:
+                    act = items[0].analyses.first()
+                    dept_name = act.suggested_department.name if act and act.suggested_department else "Civic Services"
+                    upload_msg = f"Live WhatsApp message received & analyzed! Assigned to: {dept_name}. Visible now on Dashboard & Inbox."
+                else:
+                    upload_msg = "Message received (duplicate detected & safely blocked)."
+            except Exception as wa_err:
+                upload_msg = f"Error processing WhatsApp message: {str(wa_err)}"
 
     sources = DataSource.objects.all().order_by('id')
     integrations_list = []
