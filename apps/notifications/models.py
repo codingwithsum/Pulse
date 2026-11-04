@@ -3,6 +3,7 @@ from django.contrib.auth.models import User
 from apps.core.models import TimeStampedModel
 from apps.master_data.models import Department, CivicLocation
 from apps.analytics.models import TrendAlert
+from apps.intelligence.models import FeedbackAnalysis
 
 class StaffNotificationPreference(TimeStampedModel):
     """
@@ -47,8 +48,14 @@ class NotificationDeliveryLog(TimeStampedModel):
         ('FAILED', 'Failed / Exhausted Retries'),
     ]
 
-    recipient = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_notifications')
+    recipient = models.ForeignKey(User, null=True, blank=True, on_delete=models.CASCADE, related_name='received_notifications')
+    recipient_email = models.EmailField(blank=True, help_text="Direct email address (used when recipient has no Django User account)")
     alert = models.ForeignKey(TrendAlert, null=True, blank=True, on_delete=models.SET_NULL, related_name='delivery_logs')
+    feedback_analysis = models.ForeignKey(
+        FeedbackAnalysis, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='delivery_logs',
+        help_text="Links to the classified complaint that triggered this notification"
+    )
     subject = models.CharField(max_length=255)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='QUEUED', db_index=True)
     retry_count = models.PositiveSmallIntegerField(default=0)
@@ -61,4 +68,5 @@ class NotificationDeliveryLog(TimeStampedModel):
         verbose_name_plural = 'Notification Delivery Logs'
 
     def __str__(self):
-        return f"Notification to {self.recipient.email} ({self.status})"
+        email = self.recipient.email if self.recipient else self.recipient_email
+        return f"Notification to {email} ({self.status})"

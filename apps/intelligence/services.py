@@ -157,4 +157,12 @@ def analyze_and_store_feedback(feedback_item: FeedbackItem, analyzer: Optional[B
     feedback_item.detected_language = result.detected_language
     feedback_item.save(update_fields=["status", "detected_language", "updated_at"])
 
+    # 6. Auto-notify department head via email
+    if dept and dept.head_email:
+        try:
+            from apps.notifications.services import notify_department_head_on_classification
+            notify_department_head_on_classification(analysis)
+        except Exception as e:
+            logger.warning(f"[PULSE] Department head notification failed (non-blocking): {e}")
+
     return analysis

@@ -349,6 +349,8 @@ def complaint_row(a):
         "complaint_date": f"{item.published_at:%d %b %Y, %H:%M}",
         "category": a.category.name if a.category else "Uncategorised",
         "department": a.suggested_department.name if a.suggested_department else "Unassigned",
+        "department_head": a.suggested_department.head_title if a.suggested_department else "",
+        "department_head_email": a.suggested_department.head_email if a.suggested_department else "",
         "sentiment": sent.title(),
         "sentiment_badge": sentiment_badge,
         "sentiment_score": a.sentiment_score,
@@ -902,6 +904,8 @@ def feedback_detail_view(request, item_id):
         "sentiment_score": active_analysis.sentiment_score if active_analysis else -0.75,
         "category": active_analysis.category.name if active_analysis and active_analysis.category else "Civic Issue",
         "department": active_analysis.suggested_department.name if active_analysis and active_analysis.suggested_department else "Municipal Administration",
+        "department_head_title": active_analysis.suggested_department.head_title if active_analysis and active_analysis.suggested_department else "",
+        "department_head_email": active_analysis.suggested_department.head_email if active_analysis and active_analysis.suggested_department else "",
         "urgency": urgency,
         "urgency_badge": urgency_badge,
         "urgency_reasoning": active_analysis.urgency_reasoning if active_analysis else "Evidence-backed priority assessment.",
@@ -957,6 +961,7 @@ def department_analytics_view(request):
         label, tone = sentiment_label(s['avg'])
         cards.append({
             "id": d.id, "name": d.name, "icon": DEPT_ICONS.get(d.code, "bi-building"), "head": d.head_title,
+            "head_email": d.head_email,
             "count": s['c'], "share": round(s['c'] / total * 100) if total else 0,
             "urgent": s['urgent'], "sentiment_label": label, "sentiment_tone": tone, "avg": s['avg'] or 0,
             "change": pct_change(s['c'], prev_counts.get(d.id, 0)) if key != "all" else None,

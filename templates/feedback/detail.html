@@ -80,6 +80,21 @@
                 </h3>
             </div>
 
+            {% if item.department_head_title or item.department_head_email %}
+            <div class="p-3 bg-light rounded-3 mb-3 border-start border-3 border-warning">
+                <div class="small text-muted fw-bold mb-1"><i class="bi bi-person-badge me-1"></i> Department Head</div>
+                <div class="text-dark fw-semibold">{{ item.department_head_title }}</div>
+                {% if item.department_head_email %}
+                <div class="text-muted small mt-1">
+                    <i class="bi bi-envelope me-1"></i> {{ item.department_head_email }}
+                </div>
+                {% endif %}
+                <div class="text-muted small mt-1">
+                    <i class="bi bi-building me-1"></i> {{ item.department }}
+                </div>
+            </div>
+            {% endif %}
+
             <form method="POST" action="{% url 'feedback_detail' item.id %}">
                 {% csrf_token %}
                 <div class="mb-3">

@@ -75,6 +75,9 @@
                 <div class="flex-grow-1" style="min-width:0">
                     <div class="dept-name">{{ c.name }}</div>
                     <div class="dept-head">{{ c.head|default:"Branch head" }}</div>
+                    {% if c.head_email %}
+                    <div class="text-muted small" style="font-size: 0.7rem;"><i class="bi bi-envelope me-1"></i>{{ c.head_email }}</div>
+                    {% endif %}
                 </div>
                 <span class="pill {{ c.sentiment_tone }}">{{ c.sentiment_label }}</span>
             </div>

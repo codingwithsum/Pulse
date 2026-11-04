@@ -210,10 +210,15 @@
                         {% endif %}
                     </td>
 
-                    <!-- 5. Category -->
+                    <!-- 5. Category & Department Head -->
                     <td>
                         <strong class="text-dark d-block">{{ item.category }}</strong>
-                        <span class="small text-muted">{{ item.department }}</span>
+                        <span class="small text-muted d-block"><i class="bi bi-building me-1"></i>{{ item.department }}</span>
+                        {% if item.department_head %}
+                        <span class="small text-secondary d-block" style="font-size: 0.75rem;" title="{{ item.department_head_email }}">
+                            <i class="bi bi-person-badge me-1"></i>{{ item.department_head }}
+                        </span>
+                        {% endif %}
                     </td>
 
                     <!-- 6. Sentiment -->

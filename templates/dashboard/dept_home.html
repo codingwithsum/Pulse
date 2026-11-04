@@ -9,7 +9,7 @@
 {% else %}
 <div class="page-head">
     <div>
-        <span class="scope-banner"><i class="bi {{ dept_icon }}"></i> {{ dept.head_title|default:"Department Head" }}</span>
+        <span class="scope-banner"><i class="bi {{ dept_icon }}"></i> {{ dept.head_title|default:"Department Head" }}{% if dept.head_email %} &middot; <i class="bi bi-envelope ms-1"></i> {{ dept.head_email }}{% endif %}</span>
         <h2>{{ dept.name }}</h2>
         <div class="page-sub">Complaints routed to your branch · data up to {{ anchor|date:"d M Y, H:i" }}</div>
     </div>

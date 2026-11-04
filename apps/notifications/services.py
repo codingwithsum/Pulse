@@ -4,6 +4,9 @@ from django.core.mail import send_mail
 from django.conf import settings
 from .models import StaffNotificationPreference, NotificationDeliveryLog
 
+import logging
+logger = logging.getLogger(__name__)
+
 def dispatch_trend_notifications(alert) -> int:
     """
     Dispatches asynchronous email notifications exclusively to registered, opted-in municipal staff.
@@ -90,3 +93,108 @@ def dispatch_trend_notifications(alert) -> int:
             )
 
     return dispatched_count
+
+
+def notify_department_head_on_classification(analysis) -> bool:
+    """
+    Sends an email to the department head when a complaint is classified
+    and assigned to their department.
+
+    Called automatically after AI classification in analyze_and_store_feedback().
+
+    Returns True if email was dispatched, False otherwise.
+    """
+    dept = analysis.suggested_department
+    if not dept:
+        logger.info("[PULSE] No department assigned — skipping head notification.")
+        return False
+
+    if not dept.head_email:
+        logger.warning(
+            f"[PULSE] Department '{dept.name}' has no head_email configured — "
+            f"cannot notify department head for complaint {analysis.feedback_item_id}."
+        )
+        return False
+
+    now = timezone.now()
+
+    # Idempotency: Don't send duplicate notification for the same analysis
+    already_sent = NotificationDeliveryLog.objects.filter(
+        feedback_analysis=analysis,
+        recipient_email=dept.head_email,
+        status="SENT",
+    ).exists()
+    if already_sent:
+        logger.info(f"[PULSE] Head notification already sent for analysis {analysis.id} — skipping.")
+        return False
+
+    feedback = analysis.feedback_item
+    urgency_display = analysis.get_urgency_display()
+    category_name = analysis.category.name if analysis.category else "Uncategorized"
+    location_name = analysis.extracted_location.ward_name if analysis.extracted_location else "N/A"
+    head_name = dept.head_title or "Department Head"
+
+    subject = f"[RMC PULSE] New Complaint Assigned — {dept.name} — {urgency_display}"
+
+    message_body = (
+        f"Dear {head_name},\n\n"
+        f"A new civic complaint has been classified and assigned to your department.\n"
+        f"Immediate attention and action is required.\n\n"
+        f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        f"📋 COMPLAINT DETAILS\n"
+        f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        f"• Complaint ID: {str(feedback.id)[:8]}\n"
+        f"• Department: {dept.name}\n"
+        f"• Category: {category_name}\n"
+        f"• Urgency: {urgency_display}\n"
+        f"• Sentiment: {analysis.get_sentiment_display()}\n"
+        f"• Location: {location_name}\n"
+        f"• Source: {feedback.get_source_type_display()} — {feedback.get_source_platform_display()}\n"
+        f"• Received At: {feedback.published_at.strftime('%d-%b-%Y %I:%M %p')}\n\n"
+        f"📝 SUMMARY\n"
+        f"{analysis.short_summary or feedback.raw_text[:200]}\n\n"
+        f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        f"⚡ ACTION REQUIRED\n"
+        f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        f"Please log in to the PULSE Municipal Dashboard to review this complaint,\n"
+        f"assign field staff, and initiate resolution.\n\n"
+        f"This is an automated notification from the PULSE Intelligence System.\n"
+        f"— Rajkot Municipal Corporation Urban Intelligence Operations\n"
+    )
+
+    from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'pulse-alerts@rmc.gov.in')
+
+    try:
+        send_mail(subject, message_body, from_email, [dept.head_email], fail_silently=True)
+
+        NotificationDeliveryLog.objects.create(
+            recipient=None,
+            recipient_email=dept.head_email,
+            alert=None,
+            feedback_analysis=analysis,
+            subject=subject,
+            status="SENT",
+            retry_count=0,
+            sent_at=now,
+        )
+        logger.info(
+            f"[PULSE] ✅ Department head notified: {dept.head_email} for "
+            f"complaint {str(feedback.id)[:8]} → {dept.name}"
+        )
+        return True
+
+    except Exception as e:
+        NotificationDeliveryLog.objects.create(
+            recipient=None,
+            recipient_email=dept.head_email,
+            alert=None,
+            feedback_analysis=analysis,
+            subject=subject,
+            status="FAILED",
+            error_message=str(e),
+            retry_count=1,
+        )
+        logger.error(
+            f"[PULSE] ❌ Failed to notify department head {dept.head_email}: {e}"
+        )
+        return False

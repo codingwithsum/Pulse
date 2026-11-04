@@ -117,29 +117,29 @@ class LocalCivicAnalyzer(BaseCivicAnalyzer):
         lower_text = text.lower()
         lang = self.detect_language(text)
 
-        # 1. Department & Category Heuristics (codes matched to actual DB)
-        dept_code = "solid-waste"
+        # 1. Department & Category Heuristics (codes matched to official RMC master data)
+        dept_code = "solid-waste-management"
         cat_code = "garbage-overflow"
         theme = "General Civic Inquiry"
         confidence = 0.75
 
         # DRAINAGE
         if any(w in lower_text for w in ["ગટર", "મેનહોલ", "ચોકઅપ", "ઉભરાય", "sewage", "gutter", "drainage", "overflow", "blackwater", "choke", "manhole"]):
-            dept_code = "drainage-sewerage"
+            dept_code = "drainage-chockup-overflow"
             cat_code = "manhole-overflow"
             theme = "Manhole & Sewer Overflow"
             confidence = 0.92
 
         # ROSHNI / STREETLIGHTS
         elif any(w in lower_text for w in ["લાઈટ", "અંધારું", "થાંભલો", "streetlight", "light", "dark", "pole", "led", "bulb"]):
-            dept_code = "traffic-streetlighting"
+            dept_code = "roshni-branch"
             cat_code = "streetlight-off"
             theme = "Streetlight Failure"
             confidence = 0.94
 
         # WATER WORKS
         elif any(w in lower_text for w in ["પાણી", "પીવાનું પાણી", "ગંદુ પાણી", "લીકેજ", "પ્રેશર", "water", "drinking water", "pipeline leak", "low force", "polluted water", "paani", "peene", "pani"]):
-            dept_code = "water-works"
+            dept_code = "water-works-outdoor"
             if "ગંદુ" in lower_text or "polluted" in lower_text or "contamination" in lower_text or "badbudaar" in lower_text:
                 cat_code = "water-contamination"
                 theme = "Drinking Water Contamination"
@@ -150,7 +150,7 @@ class LocalCivicAnalyzer(BaseCivicAnalyzer):
 
         # ROADS & CIVIL
         elif any(w in lower_text for w in ["ખાડા", "ખાડો", "રસ્તો", "તૂટેલો", "ડામર", "પેવર બ્લોક", "pothole", "broken road", "asphalt", "bitumen", "footpath", "cave-in"]):
-            dept_code = "engineering-roads"
+            dept_code = "bandhkam-civil-roads"
             if "footpath" in lower_text:
                 cat_code = "footpath"
                 theme = "Footpath Damage"
@@ -161,7 +161,7 @@ class LocalCivicAnalyzer(BaseCivicAnalyzer):
 
         # SOLID WASTE
         elif any(w in lower_text for w in ["કચરો", "કચરાપેટી", "ગંદકી", "ડમ્પિંગ", "ટીપર", "garbage", "trash", "dustbin", "waste", "sweeping", "swachhata"]):
-            dept_code = "solid-waste"
+            dept_code = "solid-waste-management"
             if "van" in lower_text or "tipper" in lower_text or "ટીપર" in lower_text:
                 cat_code = "door-to-door-van"
                 theme = "Door-to-Door Van Not Coming"
@@ -172,7 +172,7 @@ class LocalCivicAnalyzer(BaseCivicAnalyzer):
 
         # ANIMALS / CATTLE / DOGS
         elif any(w in lower_text for w in ["ઢોર", "ગાય", "આખલો", "cattle", "cow", "bull", "stray"]):
-            dept_code = "traffic-streetlighting"
+            dept_code = "ancd-animal-control"
             cat_code = "stray-cattle"
             theme = "Stray Animals & Cattle Control"
             confidence = 0.88
@@ -192,7 +192,7 @@ class LocalCivicAnalyzer(BaseCivicAnalyzer):
 
         # HEALTH / MOSQUITO
         elif any(w in lower_text for w in ["મચ્છર", "મેલેરિયા", "ડેન્ગ્યુ", "દવા છંટકાવ", "mosquito", "fogging", "malaria", "dengue"]):
-            dept_code = "health-sanitation"
+            dept_code = "health-urban-maleriya"
             cat_code = "mosquito-fogging"
             theme = "Mosquito Fogging & Vector Control"
             confidence = 0.89
