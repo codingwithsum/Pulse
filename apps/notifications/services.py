@@ -66,11 +66,7 @@ def dispatch_trend_notifications(alert) -> int:
         try:
             # Dispatch email via Django configured mail backend (console in dev, SMTP in prod)
             from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'pulse-alerts@rmc.gov.in')
-            # Simulated safe sending without breaking if SMTP server is unavailable
-            try:
-                send_mail(subject, message_body, from_email, [staff_user.email], fail_silently=True)
-            except Exception:
-                pass
+            send_mail(subject, message_body, from_email, [staff_user.email], fail_silently=False)
 
             NotificationDeliveryLog.objects.create(
                 recipient=staff_user,
@@ -165,7 +161,7 @@ def notify_department_head_on_classification(analysis) -> bool:
     from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'pulse-alerts@rmc.gov.in')
 
     try:
-        send_mail(subject, message_body, from_email, [dept.head_email], fail_silently=True)
+        send_mail(subject, message_body, from_email, [dept.head_email], fail_silently=False)
 
         NotificationDeliveryLog.objects.create(
             recipient=None,

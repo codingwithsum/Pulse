@@ -24,7 +24,7 @@ if env_file.exists():
             line = line.strip()
             if line and not line.startswith('#') and '=' in line:
                 key, val = line.split('=', 1)
-                os.environ.setdefault(key.strip(), val.strip().strip('"').strip("'"))
+                os.environ[key.strip()] = val.strip().strip('"').strip("'")
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-snr!@$ob--=s6a@34@n3(1a@k9ywbh$8e#hz$=ma&s$h**ae1!')
@@ -176,7 +176,7 @@ OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
 # =============================================================================
 EMAIL_BACKEND = os.environ.get(
     'DJANGO_EMAIL_BACKEND',
-    'django.core.mail.backends.console.EmailBackend'
+    os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
 )
 EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
 EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
