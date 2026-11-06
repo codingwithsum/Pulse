@@ -1,9 +1,17 @@
+import os
+import django
+
 from typing import Optional
 from fastapi import FastAPI, Query
 from fastapi.responses import PlainTextResponse
 from fastapi.middleware.cors import CORSMiddleware
 from .webhook import router as whatsapp_router
 from .config import settings
+
+# Initialize Django ORM at startup (not inside each request handler)
+if not os.environ.get("DJANGO_SETTINGS_MODULE"):
+    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "pulse_project.settings")
+django.setup()
 
 app = FastAPI(
     title="RMC CivicPulse AI Backend",

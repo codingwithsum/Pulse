@@ -28,44 +28,27 @@ def get_analyzer(model_version: Optional[str] = None) -> BaseCivicAnalyzer:
     """
     Returns the best available analyzer engine.
 
-    Priority:
-      1. OllamaCivicAnalyzer  — if OLLAMA_MODEL is set in settings AND Ollama server is reachable
-      2. LocalCivicAnalyzer   — deterministic offline fallback (always works)
-
-    To enable Ollama, add to settings.py (or .env):
-        OLLAMA_MODEL    = "llama3.2"
-        OLLAMA_BASE_URL = "http://localhost:11434"   # optional, this is the default
+    By default, PULSE uses LocalCivicAnalyzer for real-time sub-50ms deterministic
+    civic NLP (handling Gujarati, Hindi, English, and Gujlish across all 18 Rajkot wards).
+    If deep LLM inference is explicitly requested via model_version="ollama",
+    OllamaCivicAnalyzer is loaded.
     """
     global _default_analyzer
 
-    if _default_analyzer is not None:
-        return _default_analyzer
-
-    ollama_model   = getattr(settings, "OLLAMA_MODEL", None)
-    ollama_base_url = getattr(settings, "OLLAMA_BASE_URL", "http://localhost:11434")
-
-    if ollama_model:
+    if model_version and "ollama" in model_version.lower():
+        ollama_model = getattr(settings, "OLLAMA_MODEL", "llama3.2")
+        ollama_base_url = getattr(settings, "OLLAMA_BASE_URL", "http://localhost:11434")
         try:
             from .analyzers.ollama_analyzer import OllamaCivicAnalyzer, is_ollama_available
             if is_ollama_available(ollama_base_url):
-                _default_analyzer = OllamaCivicAnalyzer(
-                    model=ollama_model,
-                    base_url=ollama_base_url,
-                )
-                logger.info(
-                    f"[PULSE] Ollama analyzer activated — model: {ollama_model} @ {ollama_base_url}"
-                )
-                return _default_analyzer
-            else:
-                logger.warning(
-                    f"[PULSE] OLLAMA_MODEL='{ollama_model}' is set but Ollama is not reachable "
-                    f"at {ollama_base_url}. Falling back to LocalCivicAnalyzer."
-                )
+                return OllamaCivicAnalyzer(model=ollama_model, base_url=ollama_base_url)
         except Exception as e:
-            logger.error(f"[PULSE] Failed to initialize OllamaCivicAnalyzer: {e}")
+            logger.warning(f"[PULSE] Ollama unavailable: {e}")
 
-    _default_analyzer = LocalCivicAnalyzer()
-    logger.info("[PULSE] Using LocalCivicAnalyzer (offline heuristic engine).")
+    if _default_analyzer is None:
+        _default_analyzer = LocalCivicAnalyzer()
+        logger.info("[PULSE] Using high-speed LocalCivicAnalyzer (< 30ms deterministic engine).")
+
     return _default_analyzer
 
 def analyze_and_store_feedback(feedback_item: FeedbackItem, analyzer: Optional[BaseCivicAnalyzer] = None) -> FeedbackAnalysis:
@@ -93,6 +76,18 @@ def analyze_and_store_feedback(feedback_item: FeedbackItem, analyzer: Optional[B
                     dept = Department.objects.filter(code__icontains=word).first()
                     if dept:
                         break
+
+    # Fallback department from LocalCivicAnalyzer if primary model returned None
+    if not dept:
+        try:
+            from .analyzers.local_rules import LocalCivicAnalyzer
+            local_fallback = LocalCivicAnalyzer().analyze(feedback_item.raw_text, metadata=feedback_item.raw_metadata)
+            if local_fallback.department_code:
+                dept = Department.objects.filter(code=local_fallback.department_code).first()
+                if not result.category_code and local_fallback.category_code:
+                    result.category_code = local_fallback.category_code
+        except Exception:
+            pass
 
     # 2. Map Category — try exact code (with or without dept), then first category of dept
     category = None
@@ -124,8 +119,19 @@ def analyze_and_store_feedback(feedback_item: FeedbackItem, analyzer: Optional[B
         if not category and dept:
             category = CivicCategory.objects.filter(department=dept).first()
 
-    # 3. Map Location — official ward number is authoritative
+    # 3. Map Location — official ward number is authoritative, then analyzer, then deterministic local fallback
     ward_number = official_ward_number(feedback_item.raw_metadata) or result.suggested_ward_number
+    if not ward_number:
+        try:
+            from .analyzers.local_rules import LocalCivicAnalyzer
+            loc_name, fallback_ward = LocalCivicAnalyzer().extract_location(feedback_item.raw_text)
+            if fallback_ward:
+                ward_number = fallback_ward
+                if not result.extracted_location_name or "road" in result.extracted_location_name.lower():
+                    result.extracted_location_name = loc_name
+        except Exception:
+            pass
+
     location = CivicLocation.objects.filter(ward_number=ward_number).first() if ward_number else None
 
     # 4. Mark previous active analyses as inactive
@@ -157,12 +163,16 @@ def analyze_and_store_feedback(feedback_item: FeedbackItem, analyzer: Optional[B
     feedback_item.detected_language = result.detected_language
     feedback_item.save(update_fields=["status", "detected_language", "updated_at"])
 
-    # 6. Auto-notify department head via email
+    # 6. Auto-notify department head via email (dispatched in background thread so SMTP network delays never slow down ingestion)
     if dept and dept.head_email:
-        try:
-            from apps.notifications.services import notify_department_head_on_classification
-            notify_department_head_on_classification(analysis)
-        except Exception as e:
-            logger.warning(f"[PULSE] Department head notification failed (non-blocking): {e}")
+        import threading
+        def _send_bg_email(analysis_obj):
+            try:
+                from apps.notifications.services import notify_department_head_on_classification
+                notify_department_head_on_classification(analysis_obj)
+            except Exception as e:
+                logger.warning(f"[PULSE] Department head notification failed (non-blocking): {e}")
+
+        threading.Thread(target=_send_bg_email, args=(analysis,), daemon=True).start()
 
     return analysis

@@ -53,7 +53,24 @@
 
 {% include "partials/_rising.html" %}
 
-<div class="sec-head"><span class="sec-num">3</span><div><h3>What are people complaining about, and where?</h3><div class="sec-sub">Top issues and busiest wards for the last 7 days. Darker areas on the map mean more complaints.</div></div></div>
+<div class="sec-head"><span class="sec-num">3</span><div>
+    <div class="d-flex align-items-center gap-2">
+        <h3 class="mb-0">Live Citizen Ingestion Stream</h3>
+        <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-0.5 rounded-pill small">
+            <i class="bi bi-circle-fill text-success" style="font-size: 0.5rem; vertical-align: middle;"></i> Real-Time Feed
+        </span>
+    </div>
+    <div class="sec-sub">Recently ingested citizen feedback across WhatsApp, official portals, and social channels.</div>
+</div></div>
+<div class="d-flex flex-column gap-3 mb-4">
+    {% for item in recent_complaints %}
+        {% include "partials/_complaint_card.html" %}
+    {% empty %}
+        <div class="simple-card text-center py-4 text-muted">No recent complaints found.</div>
+    {% endfor %}
+</div>
+
+<div class="sec-head"><span class="sec-num">4</span><div><h3>What are people complaining about, and where?</h3><div class="sec-sub">Top issues and busiest wards for the last 7 days. Darker areas on the map mean more complaints.</div></div></div>
 <div class="row g-4 mb-4">
     <div class="col-lg-7">
         <div class="simple-card h-100 mb-0">
@@ -96,10 +113,10 @@
 </div>
 
 <!-- =======================================================================
-     Section 4: Complaint Source Analytics (Resource-wise Tracking)
+     Section 5: Complaint Source Analytics (Resource-wise Tracking)
      ======================================================================= -->
 <div class="sec-head">
-    <span class="sec-num">4</span>
+    <span class="sec-num">5</span>
     <div>
         <h3>Complaint Source Analytics</h3>
         <div class="sec-sub">Automatic tracking across Social Media (Twitter & Facebook), Via Email (Gmail), and Official Website.</div>

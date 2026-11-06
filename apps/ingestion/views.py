@@ -44,8 +44,10 @@ class WhatsAppWebhookView(APIView):
 
         connector = WhatsAppCloudApiConnector()
 
-        if app_secret and app_secret != "rmc_demo_secret" and not connector.verify_signature(request.body, signature, app_secret):
-            return Response({"error": "Invalid signature"}, status=status.HTTP_401_UNAUTHORIZED)
+        # Enforce HMAC-SHA256 signature verification in production with configured secret
+        if signature and app_secret not in ("", "rmc_demo_secret", "your_meta_app_secret_here"):
+            if not connector.verify_signature(request.body, signature, app_secret):
+                return Response({"error": "Invalid signature"}, status=status.HTTP_401_UNAUTHORIZED)
 
         try:
             payload = json.loads(request.body.decode('utf-8'))

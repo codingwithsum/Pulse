@@ -11,10 +11,76 @@
     </div>
 </div>
 
-{% if upload_msg %}
+{% if upload_msg and not sim_result %}
 <div class="alert alert-success alert-dismissible fade show mb-4" role="alert">
     <i class="bi bi-check-circle-fill me-2"></i> {{ upload_msg }}
     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+{% if sim_result %}
+<div class="card border-success shadow-sm mb-4" style="background: #f0fdf4; border-width: 2px;">
+    <div class="card-body p-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+            <div class="d-flex align-items-center gap-2">
+                <span class="badge bg-success px-3 py-2 fs-6">
+                    <i class="bi bi-check-circle-fill me-1"></i> Live Ingestion & AI Routing Succeeded!
+                </span>
+                <span class="badge bg-white text-success border border-success fw-semibold">
+                    <i class="bi bi-lightning-charge-fill me-1"></i> Processed in {{ sim_result.speed }}
+                </span>
+            </div>
+            <span class="small text-muted font-monospace">
+                <i class="bi bi-shield-lock-fill text-success"></i> SHA-256 Hash: {{ sim_result.sender_hash }}
+            </span>
+        </div>
+
+        <div class="p-3 bg-white rounded border mb-3">
+            <div class="small text-muted fw-semibold mb-1">Incoming Citizen Message ({{ sim_result.language_name }}):</div>
+            <div class="fs-5 text-dark fw-bold">"{{ sim_result.text }}"</div>
+        </div>
+
+        <div class="row g-3 mb-3">
+            <div class="col-md-4">
+                <div class="p-3 bg-white rounded border h-100">
+                    <div class="small text-muted fw-semibold mb-1"><i class="bi bi-geo-alt-fill text-danger me-1"></i> Extracted Location:</div>
+                    <div class="fs-6 fw-bold text-dark">{{ sim_result.ward }}</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="p-3 bg-white rounded border h-100">
+                    <div class="small text-muted fw-semibold mb-1"><i class="bi bi-building-fill text-primary me-1"></i> Assigned Department:</div>
+                    <div class="fs-6 fw-bold text-dark">{{ sim_result.department }}</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="p-3 bg-white rounded border h-100">
+                    <div class="small text-muted fw-semibold mb-1"><i class="bi bi-exclamation-triangle-fill text-warning me-1"></i> Urgency & Mood:</div>
+                    <div>
+                        <span class="badge {% if sim_result.urgency == 'EMERGENCY' %}bg-danger{% elif sim_result.urgency == 'HIGH' %}bg-warning text-dark{% else %}bg-info text-dark{% endif %} me-1">{{ sim_result.urgency }}</span>
+                        <span class="badge bg-secondary">{{ sim_result.sentiment }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2 pt-2 border-top">
+            <a href="{% url 'dashboard' %}" class="btn btn-success fw-semibold px-3">
+                <i class="bi bi-speedometer2 me-1"></i> View on Live Dashboard &rarr;
+            </a>
+            {% if sim_result.ward_num %}
+            <a href="{% url 'ward_detail' sim_result.ward_num %}" class="btn btn-outline-success fw-semibold px-3">
+                <i class="bi bi-pin-map-fill me-1"></i> View in Ward {{ sim_result.ward_num }} &rarr;
+            </a>
+            {% endif %}
+            <a href="{% url 'feedback_detail' sim_result.item_id %}" class="btn btn-outline-dark fw-semibold px-3">
+                <i class="bi bi-search me-1"></i> View AI Analysis &amp; Audit Trail &rarr;
+            </a>
+            <a href="{% url 'feedback_inbox' %}" class="btn btn-outline-secondary fw-semibold px-3">
+                <i class="bi bi-inbox me-1"></i> View in Complaints Inbox
+            </a>
+        </div>
+    </div>
 </div>
 {% endif %}
 

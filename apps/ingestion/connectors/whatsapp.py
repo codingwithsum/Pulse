@@ -93,7 +93,7 @@ class WhatsAppCloudApiConnector(BaseConnector):
             is_synthetic=False
         )
 
-    def handle_incoming_webhook(self, payload: Dict[str, Any], data_source: DataSource) -> List[FeedbackItem]:
+    def handle_incoming_webhook(self, payload: Dict[str, Any], data_source: DataSource, allow_resimulation: bool = False) -> List[FeedbackItem]:
         """
         Processes standard Meta Cloud API webhook payload:
         entry -> changes -> value -> messages
@@ -112,7 +112,13 @@ class WhatsAppCloudApiConnector(BaseConnector):
 
                     # Deduplication check
                     content_hash = norm_payload.content_hash
-                    if FeedbackItem.objects.filter(content_hash=content_hash).exists():
+                    existing = FeedbackItem.objects.filter(content_hash=content_hash).first()
+                    if existing:
+                        if allow_resimulation:
+                            existing.published_at = timezone.now()
+                            existing.save(update_fields=["published_at", "updated_at"])
+                            analyze_and_store_feedback(existing)
+                            created_items.append(existing)
                         continue
 
                     with transaction.atomic():
@@ -125,7 +131,9 @@ class WhatsAppCloudApiConnector(BaseConnector):
                             published_at=norm_payload.published_at,
                             raw_metadata=norm_payload.technical_metadata,
                             is_synthetic=False,
-                            status="PENDING_ANALYSIS"
+                            status="PENDING_ANALYSIS",
+                            source_type="SOCIAL_MEDIA",
+                            source_platform="WHATSAPP",
                         )
                     # Run AI analysis outside the transaction lock so DB is not held during LLM call
                     analyze_and_store_feedback(item)

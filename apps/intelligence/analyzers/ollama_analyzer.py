@@ -104,6 +104,11 @@ Urgency rules:
 - MEDIUM: standard civic complaint needing timely action
 - LOW: feedback, appreciation, already resolved
 
+Rajkot Wards and Gujlish Rules:
+- Rajkot has Wards 1 to 18. If the text mentions any ward (e.g. "ward 13", "ward 10", "વોર્ડ ૭"), extract that number into "suggested_ward_number" as an integer (1 to 18).
+- "gay" or "dhor" in Gujarati/Gujlish means cow/cattle (Animal Control: ancd-animal-control, category: stray-cattle). "gay road par bese che" means stray cattle sitting on road causing traffic.
+- Never extract "Ma Gay Road" or similar words as location names.
+
 """ + RMC_DEPARTMENTS + "\n" + RMC_CATEGORIES
 
 
@@ -248,11 +253,16 @@ class OllamaCivicAnalyzer(BaseCivicAnalyzer):
 
 
 def is_ollama_available(base_url: str = "http://localhost:11434") -> bool:
-    """Quick health-check — returns True if Ollama server is reachable."""
-    import urllib.request
-    import urllib.error
+    """Quick non-blocking health-check — returns True only if Ollama server is immediately reachable."""
+    import socket
+    from urllib.parse import urlparse
     try:
-        urllib.request.urlopen(f"{base_url}/api/tags", timeout=3)
-        return True
+        parsed = urlparse(base_url)
+        host = parsed.hostname or "127.0.0.1"
+        port = parsed.port or 11434
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.settimeout(0.2)
+            s.connect((host, port))
+            return True
     except Exception:
         return False

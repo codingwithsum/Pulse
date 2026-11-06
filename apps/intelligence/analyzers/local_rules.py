@@ -19,7 +19,13 @@ class LocalCivicAnalyzer(BaseCivicAnalyzer):
         self.ward_keywords = []
         try:
             for loc in CivicLocation.objects.all():
-                landmarks = [l.strip().lower() for l in loc.known_landmarks.split(",") if len(l.strip()) > 3]
+                raw_combined = f"{loc.known_landmarks},{loc.ward_name}"
+                # Split by comma, slash, and dash to extract distinct landmark names
+                parts = re.split(r'[,/\-]', raw_combined)
+                landmarks = [
+                    p.strip().lower() for p in parts
+                    if len(p.strip()) > 3 and not re.match(r'^ward\s*\d+', p.strip().lower())
+                ]
                 self.ward_keywords.append({
                     "ward_number": loc.ward_number,
                     "zone": loc.zone,
@@ -83,21 +89,26 @@ class LocalCivicAnalyzer(BaseCivicAnalyzer):
             except ValueError:
                 pass
 
-        # 2. Native Gujarati script landmark gazetteer
+        # 2. Native Gujarati script landmark gazetteer (covers all 18 wards)
         gujarati_landmarks = [
-            (2, ["રેલનગર", "પોપટપરા", "બજરંગવાડી"]),
-            (7, ["કાલાવડ રોડ", "પ્રેમ મંદિર", "રેસકોર્સ", "અમીન માર્ગ", "કોટેચા ચોક", "યાજ્ઞિક રોડ"]),
-            (4, ["ભગવતી પરા", "બેડી પરા", "મોરબી રોડ"]),
-            (5, ["પેડક રોડ", "ગ્રીનલેન્ડ", "સંત કબીર રોડ", "ત્રિકોણ બાગ"]),
-            (9, ["નાના મવા", "રૈયા રોડ", "સ્પીડવેલ"]),
-            (10, ["૧૫૦ ફીટ રીંગ રોડ", "માવડી", "ઉમિયા ચોક"]),
-            (11, ["પુષ્કર ધામ", "હરિદર્શન"]),
             (1, ["ગાંધીગ્રામ", "માધાપર"]),
+            (2, ["રેલનગર", "પોપટપરા", "બજરંગવાડી"]),
+            (3, ["ધર્મેન્દ્રસિંહજી", "દાણાપીઠ", "પરા બજાર", "પરાબજાર"]),
+            (4, ["ભગવતી પરા", "ભગવતીપરા", "બેડી પરા", "બેડીપરા", "મોરબી રોડ"]),
+            (5, ["પેડક રોડ", "ગ્રીનલેન્ડ", "સંત કબીર રોડ", "સંતકબીર રોડ", "ત્રિકોણ બાગ"]),
+            (6, ["ચુનારા વાડ", "ચુનારાવાડ", "દૂધ ડેરી"]),
+            (7, ["કાલાવડ રોડ", "પ્રેમ મંદિર", "રેસકોર્સ", "રેસ કોર્સ", "અમીન માર્ગ", "કોટેચા ચોક", "યાજ્ઞિક રોડ"]),
             (8, ["યુનિવર્સિટી રોડ", "ઇન્દિરા સર્કલ", "સાધુ વાસવાણી"]),
-            (13, ["ટાગોર રોડ", "ગોંડલ રોડ", "ભક્તિનગર"]),
-            (15, ["ચુનારાવાડ", "ભાવનગર રોડ"]),
-            (16, ["આજી ડેમ", "માર્કેટિંગ યાર્ડ"]),
-            (17, ["કોઠારીયા", "આટિકા"]),
+            (9, ["નાના મવા", "નાનામવા", "રૈયા રોડ", "સ્પીડવેલ"]),
+            (10, ["૧૫૦ ફીટ રીંગ રોડ", "150 ફીટ રીંગ રોડ", "માવડી", "ઉમિયા ચોક"]),
+            (11, ["પુષ્કર ધામ", "હરિદર્શન"]),
+            (12, ["વાવડી", "કણકોટ રોડ", "જીઈસી"]),
+            (13, ["ટાગોર રોડ", "ગોંડલ રોડ", "ભક્તિનગર સ્ટેશન"]),
+            (14, ["ભક્તિ નગર", "ભક્તિનગર", "ગીતા મંદિર", "દાદી બાગ"]),
+            (15, ["ભાવનગર રોડ"]),
+            (16, ["આજી ડેમ", "માર્કેટિંગ યાર્ડ", "૫૦ ફીટ રોડ", "50 ફીટ રોડ"]),
+            (17, ["કોઠારીયા", "આટિકા", "ઢેબર રોડ"]),
+            (18, ["સમ્રાટ", "સમ્રાટ ઈન્ડસ્ટ્રીયલ", "કોઠારીયા રીંગ રોડ", "જીઆઈડીસી"]),
         ]
         for w_num, g_list in gujarati_landmarks:
             for g_item in g_list:
@@ -171,7 +182,7 @@ class LocalCivicAnalyzer(BaseCivicAnalyzer):
             confidence = 0.90
 
         # ANIMALS / CATTLE / DOGS
-        elif any(w in lower_text for w in ["ઢોર", "ગાય", "આખલો", "cattle", "cow", "bull", "stray"]):
+        elif any(w in lower_text for w in ["ઢોર", "ગાય", "આખલો", "cattle", "cow", "bull", "stray", "dhor", "dhoro"]) or re.search(r'\bgay\b', lower_text):
             dept_code = "ancd-animal-control"
             cat_code = "stray-cattle"
             theme = "Stray Animals & Cattle Control"
